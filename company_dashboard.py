@@ -1,9 +1,9 @@
-import streamlit as st
+mport streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Company Intelligence Dashboard", page_icon="🏢", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS
+# CSS con tooltip mejorado que no desaparece al mover el mouse
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap');
@@ -49,15 +49,69 @@ st.markdown("""
     .warning-box {background: rgba(195, 157, 123, 0.1); border-left: 4px solid #C39D7B; padding: 16px; border-radius: 8px; margin: 16px 0; color: #2d2d2d !important;}
     .info-box {background: rgba(0, 100, 146, 0.1); border-left: 4px solid #006492; padding: 16px; border-radius: 8px; margin: 16px 0; color: #2d2d2d !important;}
     .mapping-box {background: rgba(27, 94, 92, 0.1); border-left: 4px solid #1B5E5C; padding: 20px; border-radius: 8px; margin: 16px 0; color: #2d2d2d !important;}
-    .with-source {position: relative; cursor: pointer; border-bottom: 1px dotted #006492; display: inline;}
-    .source-tooltip {display: none; position: absolute; background: #2d2d2d; color: #FFF !important; padding: 12px 16px; border-radius: 8px; font-size: 0.8rem; z-index: 1000; max-width: 400px; min-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); left: 0; top: 100%; margin-top: 8px; line-height: 1.5;}
-    .with-source:hover .source-tooltip {display: block;}
-    .source-tooltip a {color: #A5CD24 !important; text-decoration: underline;}
-    .source-tooltip strong {color: #FFF !important;}
     .footer {background: #E4E4E4; padding: 24px; border-radius: 8px; margin-top: 32px; font-size: 0.875rem; color: #666 !important; text-align: center;}
     .criteria-box {background: #FFF; border: 2px solid #1B5E5C; border-radius: 8px; padding: 16px; margin: 16px 0;}
-    .criteria-met {color: #A5CD24; font-weight: bold;}
-    .criteria-not-met {color: #C12D27; font-weight: bold;}
+    
+    /* TOOLTIP MEJORADO - no desaparece al mover el mouse */
+    .with-source {
+        position: relative;
+        cursor: pointer;
+        border-bottom: 1px dotted #006492;
+        display: inline;
+    }
+    .source-tooltip {
+        display: none;
+        position: absolute;
+        background: #2d2d2d;
+        color: #FFF !important;
+        padding: 16px 20px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        z-index: 9999;
+        max-width: 450px;
+        min-width: 300px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        left: 0;
+        top: calc(100% + 5px);
+        line-height: 1.6;
+    }
+    /* Pseudo-elemento para crear puente entre el texto y el tooltip */
+    .source-tooltip::before {
+        content: "";
+        position: absolute;
+        top: -10px;
+        left: 0;
+        right: 0;
+        height: 15px;
+        background: transparent;
+    }
+    .with-source:hover .source-tooltip,
+    .source-tooltip:hover {
+        display: block;
+    }
+    .source-tooltip a {
+        color: #A5CD24 !important;
+        text-decoration: underline;
+        font-weight: 600;
+    }
+    .source-tooltip strong {
+        color: #FFF !important;
+    }
+    .source-quote {
+        font-style: italic;
+        color: #ccc !important;
+        margin: 8px 0;
+        padding-left: 10px;
+        border-left: 2px solid #A5CD24;
+    }
+    
+    /* Input label color fix */
+    .input-label {
+        color: #2d2d2d !important;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,94 +125,96 @@ BXT_L2_SAVINGS = {
     "Default": 0.04
 }
 
-# Data
+# Data actualizada con los links correctos
 COMPANY_DATA = {
     "kiewit": {
         "meta": {
-            "company_name": {"value": "Kiewit Corporation", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com"},
-            "jurisdiction": {"value": "United States", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com"},
-            "listed_status": {"value": "Private company (employee-owned)", "quote": "Employee-owned.", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"}
+            "company_name": {"value": "Kiewit Corporation", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"},
+            "jurisdiction": {"value": "United States, Canada and Mexico", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
+            "listed_status": {"value": "Private company (employee-owned)", "quote": "With its roots dating back to 1884, the employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}
         },
         "company_overview": {
-            "description": {"value": "Kiewit Corporation is one of North America's largest construction and engineering organizations, providing integrated EPC services across energy, transportation, water, mining, oil, gas and chemical markets.", "quote": "Kiewit combines world-renowned capabilities with EPC expertise for seamless project delivery.", "source_url": "https://www.kiewit.com"},
-            "founded_year": {"value": 1884, "quote": "Backed by more than 140 years of self-perform construction expertise.", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"},
-            "headquarters": {"value": "Omaha, Nebraska, United States", "quote": "Kiewit is a civil engineering company from the United States, with its headquarters in Nebraska.", "source_url": "https://www.statista.com/statistics/1449369/global-revenue-of-kiewit-corporation/"},
-            "primary_industry": {"value": "Engineering, Procurement and Construction (EPC) for infrastructure and industrial projects", "quote": "Kiewit combines world-renowned capabilities with EPC expertise.", "source_url": "https://www.kiewit.com"},
+            "description": {"value": "Kiewit Corporation is one of North America's largest construction and engineering organizations, delivering end-to-end engineering, procurement and construction (EPC) services for critical infrastructure and energy projects.", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"},
+            "founded_year": {"value": 1884, "quote": "With its roots dating back to 1884, the employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
+            "headquarters": {"value": "Omaha, Nebraska, United States", "quote": "The Kiewit Corporation is a Fortune 500 contractor business headquartered in Omaha.", "source_url": "http://www.omahaimc.org/kiewit-corporation/"},
+            "primary_industry": {"value": "Engineering, Procurement and Construction (EPC) services", "quote": "The EPC model streamlines execution with a single contractor managing design, procurement and construction — ensuring cost certainty, schedule reliability and reduced owner risk.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"},
             "primary_markets": [
-                {"value": "Transportation infrastructure", "quote": "As one of the largest transportation contractors in North America.", "source_url": "https://www.kiewit.com.au"},
-                {"value": "Power generation and delivery", "quote": "Kiewit is a leader in the power industry.", "source_url": "https://www.kiewit.com.au"},
-                {"value": "Oil, gas and chemical facilities", "quote": "Kiewit has served domestic and international OGC companies.", "source_url": "https://www.kiewit.com.au"},
-                {"value": "Water and wastewater infrastructure", "quote": "Kiewit specializes in water infrastructure.", "source_url": "https://www.kiewit.com.au"},
-                {"value": "Mining and industrial projects", "quote": "Kiewit specializes in mine management and infrastructure.", "source_url": "https://www.kiewit.com.au"},
-                {"value": "Nuclear and data centers", "quote": "Kiewit capabilities include nuclear and specialized infrastructure.", "source_url": "https://www.kiewit.com"}
+                {"value": "Transportation", "quote": "Kiewit offers construction and engineering services in a variety of markets including transportation.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Oil, gas and chemical", "quote": "Kiewit offers construction and engineering services in oil, gas and chemical.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Power", "quote": "Kiewit offers construction and engineering services in power.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Building", "quote": "Kiewit offers construction and engineering services in building.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Marine", "quote": "Kiewit offers construction and engineering services in marine.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Water/wastewater", "quote": "Kiewit offers construction and engineering services in water/wastewater.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Industrial", "quote": "Kiewit offers construction and engineering services in industrial.", "source_url": "https://www.linkedin.com/company/kiewit"},
+                {"value": "Mining", "quote": "Kiewit offers construction and engineering services in mining.", "source_url": "https://www.linkedin.com/company/kiewit"}
             ],
-            "naics_codes": [{"code": "236220", "title": "Commercial and Institutional Building Construction"}, {"code": "237310", "title": "Highway, Street, and Bridge Construction"}, {"code": "237120", "title": "Oil and Gas Pipeline Construction"}],
-            "sic_codes": [{"code": "15420100", "title": "Commercial building contractors"}, {"code": "15410000", "title": "Industrial buildings and warehouses"}]
+            "naics_codes": [],
+            "sic_codes": []
         },
         "operational_footprint": {
             "regions_of_operation": [
-                {"value": "United States (multiple regions)", "quote": "As one of the largest transportation contractors in North America.", "source_url": "https://www.kiewit.com.au"},
-                {"value": "Canada", "quote": "Kiewit operates across North America.", "source_url": "https://www.kiewit.com"},
-                {"value": "International projects", "quote": "Kiewit has served domestic and international OGC companies.", "source_url": "https://www.kiewit.com.au"}
+                {"value": "United States", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
+                {"value": "Canada", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
+                {"value": "Mexico", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}
             ],
-            "business_segments": ["Transportation", "Power", "Oil, Gas & Chemical", "Water/Wastewater", "Mining", "Industrial/Building", "Nuclear"],
+            "business_segments": ["Transportation", "Oil, gas and chemical", "Power", "Building", "Marine", "Water/wastewater", "Industrial", "Mining"],
             "geographic_scope": "NAM/LATAM"
         },
         "workforce": {
-            "total_employees": {"value": 31800, "quote": "31,800 STAFF & CRAFT EMPLOYEES", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"},
-            "equipment_fleet": {"value": 34800, "quote": "34,800 UNITS IN EQUIPMENT FLEET", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"}
+            "total_employees": {"value": 31800, "quote": "16.8 BILLION 31,800 EMPLOYEES 2024 REVENUE 2024 EMPLOYEES", "source_url": "https://www.kiewit.com/wp-content/uploads/2025/09/EN_2024-Sustainability-Report-reduced.pdf"},
+            "equipment_fleet": {"value": None, "quote": "", "source_url": ""}
         },
         "financials": {
-            "revenue_2024": {"value": 16.8, "quote": "$16.8 BILLION IN 2024 FINANCIAL REVENUE", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"},
-            "revenue_2023": {"value": 17.1, "quote": "The global revenue of Kiewit Corporation... reaching 17.1 billion U.S. dollars in 2023.", "source_url": "https://www.statista.com/statistics/1449369/global-revenue-of-kiewit-corporation/"},
-            "equipment_replacement_value": {"value": 5.0, "quote": "$5 BILLION IN REPLACEMENT VALUE", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"},
+            "revenue_2024": {"value": 16.8, "quote": "Proven Results. $16.8B 2024 Revenues 31,800 Craft and Staff Employees", "source_url": "https://www.kiewit.com"},
+            "revenue_2023": {"value": None, "quote": "", "source_url": ""},
+            "equipment_replacement_value": {"value": None, "quote": "", "source_url": ""},
             "source_note": "Private company – estimates only; no official statutory filings."
         },
-        "ownership_structure": {"ownership_type": {"value": "Privately held, employee-owned", "quote": "Employee-owned.", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"}},
+        "ownership_structure": {"ownership_type": {"value": "Privately held, employee-owned organization", "quote": "Kiewit's diversified services and unique network of decentralized offices — backed by a multi-billion-dollar, employee-owned organization — enable us to tackle construction and engineering projects of any size.", "source_url": "https://www.kiewit.com/about-us/"}},
         "procurement_organization": {
-            "overall_maturity_level": {"value": "Defined to Managed", "quote": "We have a shared service in procurement... the supply chain is embedded in the operation district.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+            "overall_maturity_level": {"value": "Defined to Managed", "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning. We're part of the strategy, the estimate, the bid.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
             "maturity_dimensions": {
-                "governance_and_org": {"value": "Managed", "score": 4, "quote": "We have a shared service in procurement... VP responsible for supply chain strategy.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                "process_and_policy": {"value": "Defined", "score": 3, "quote": "Responsible for negotiating contracts and managing supplier relationships.", "source_url": "https://theorg.com/org/kiewit/teams/procurement-and-contracts-team"},
-                "technology_and_data": {"value": "Defined", "score": 3, "quote": "Procurement experts leverage scale, strategy and technology.", "source_url": "https://www.kiewit.com"},
-                "supplier_management": {"value": "Defined", "score": 3, "quote": "Reorganized team around procurement categories — specialists own specific domains.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                "integration_lifecycle": {"value": "Managed", "score": 4, "quote": "Supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
+                "governance_and_org": {"value": "Managed", "score": 4, "quote": "Depending on the project, material procurement can account for up to 50% of total installed costs. That makes Carsten's team critical to the bottom line.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                "process_and_policy": {"value": "Defined", "score": 3, "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning. We're part of the strategy, the estimate, the bid.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                "technology_and_data": {"value": "Defined", "score": 3, "quote": "Our procurement and supply chain experts leverage scale, strategy and technology to ensure materials, equipment and services keep projects on track.", "source_url": "https://www.kiewit.com/?lang=en-ca"},
+                "supplier_management": {"value": "Defined", "score": 3, "quote": "What distinguishes strong suppliers during these moments is transparency. The worst thing a vendor can do is hide a problem. If we know early, we can help.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                "integration_lifecycle": {"value": "Managed", "score": 4, "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning. We're part of the strategy, the estimate, the bid. We help define risk and create the roadmap for delivery.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
             },
-            "structure": {"value": "Procurement operates as a shared service; supply chain teams embedded in operating districts.", "quote": "We have a shared service in procurement... supply chain is embedded in the operation district.", "source_url": "https://www.youtube.com/watch?v=p63u8Zabtfc"},
-            "category_mgmt": {"value": "Category-based organization with specialists owning specific domains.", "quote": "Reorganized team around procurement categories — specialists own domains like valves or piping.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-            "cpo": {"value": "Carsten Bernstiel – VP of Procurement, OGC Group", "quote": "At the center is Carsten Bernstiel, VP of Procurement for Kiewit's OGC group.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
+            "structure": {"value": "Supply chain sits between engineering and construction, responsible for ensuring materials arrive on time and in full to support EPC project execution.", "quote": "We sit between engineering and construction. Our job is to make sure materials arrive when construction needs them — not a day late, not a piece short.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+            "category_mgmt": {"value": "Procurement is organized around categories with specialists owning domains such as valves or piping, building technical expertise and deep supplier relationships.", "quote": "He's also reorganized his team around procurement categories — giving specialists ownership over specific domains like valves or piping.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+            "cpo": {"value": "Carsten Bernstiel – Vice President of Procurement, Oil, Gas & Chemical group", "quote": "At the center of this complex machinery is Carsten Bernstiel, Vice President of Procurement for Kiewit's Oil, Gas & Chemical group, a veteran of the energy industry.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
         },
         "procurement_risks": {
             "key_risks": [
-                {"value": "Tariffs and trade policy changes affecting costs", "quote": "Tariffs make cost estimations harder and can lead to increased costs for EPC companies.", "source_url": "https://www.youtube.com/watch?v=p63u8Zabtfc"},
-                {"value": "Supply chain disruptions impacting schedule certainty", "quote": "Supply chain disruptions impacting schedule certainty.", "source_url": "https://www.youtube.com/watch?v=p63u8Zabtfc"},
-                {"value": "Logistics challenges for global sourcing", "quote": "Oversees everything from resource planning to logistics and expediting.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
+                {"value": "High share of total installed cost tied to materials, exposing projects to price and availability risks", "quote": "Depending on the project, material procurement can account for up to 50% of total installed costs. That makes Carsten's team critical to the bottom line.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                {"value": "Global shipping and logistics disruptions, such as canal delays, impacting lead times", "quote": "We rerouted shipments through Los Angeles and handled final delivery by train and truck. That's the kind of creative triage we do every day.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                {"value": "Dependence on timely, transparent communication from suppliers to identify and resolve issues early", "quote": "The worst thing a vendor can do is hide a problem. If we know early, we can help. That's the foundation of real partnership.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
             ],
-            "mitigation": {"value": "Early involvement in project strategy, category-based specialization, proactive risk identification.", "quote": "We now ask: Who are the right partners? Where are the risks? How can we mitigate them before they become problems?", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
+            "mitigation": {"value": "Kiewit's OGC procurement team mitigates risk through early involvement in strategy and estimating, proactive planning of procurement cycles, rerouting logistics when corridors are constrained, and insisting on early, transparent supplier communication.", "quote": "We rerouted shipments through Los Angeles and handled final delivery by train and truck. That's the kind of creative triage we do every day.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
         },
         "procurement_swot": {
             "strengths": [
-                {"value": "Integrated EPC model with self-perform construction", "quote": "Backed by 140+ years of self-perform construction expertise.", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"},
-                {"value": "Shared procurement services and embedded supply chain", "quote": "We have a shared service in procurement.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Category-based procurement with domain expertise", "quote": "Reorganized team around procurement categories.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
+                {"value": "Integrated EPC model with a single contractor managing design, procurement and construction for cost and schedule control", "quote": "The EPC model streamlines execution with a single contractor managing design, procurement and construction — ensuring cost certainty, schedule reliability and reduced owner risk.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"},
+                {"value": "Supply chain function integrated from the start of project planning, helping define risk and delivery roadmap", "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                {"value": "Category-based procurement structure with domain specialists and emphasis on partnership and transparency with suppliers", "quote": "He's also reorganized his team around procurement categories — giving specialists ownership over specific domains like valves or piping.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
             ],
             "weaknesses": [
-                {"value": "Limited public disclosure on procurement KPIs", "quote": "No public disclosure of procurement KPIs.", "source_url": "https://www.kiewit.com"},
-                {"value": "Complex project-based organization", "quote": "Unique organizational structure, backed by vast network of resources.", "source_url": "https://www.kiewit.com"}
+                {"value": "Limited public transparency on procurement systems, quantitative KPIs and ESG programs compared with listed EPC peers", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"},
+                {"value": "Public evidence on advanced procurement practices is concentrated in the Oil, Gas & Chemical group, so maturity may be uneven across markets", "quote": "At the center of this complex machinery is Carsten Bernstiel, Vice President of Procurement for Kiewit's Oil, Gas & Chemical group.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
             ],
             "opportunities": [
-                {"value": "AI and advanced analytics in procurement", "quote": "Procurement teams will be able to use AI to predict and prevent disruptions.", "source_url": "https://www.youtube.com/watch?v=p63u8Zabtfc"},
-                {"value": "ESG and supplier diversity programs", "quote": "Opportunity to strengthen ESG programs.", "source_url": "https://www.kiewit.com"},
-                {"value": "Scale to standardize category strategies", "quote": "Leveraging Kiewit's scale.", "source_url": "https://www.kiewit.com"}
+                {"value": "Deepening use of technology and AI in procurement to anticipate supply chain disruptions and optimize sourcing", "quote": "This consultative role has transformed EPCs into partners — not just vendors.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                {"value": "Making ESG, sustainability and supplier diversity practices more visible to align with client and regulatory expectations", "quote": "Kiewit has a long history of partnering with the local business community.", "source_url": "https://www.kiewit.com/business-with-us/opportunities/central-florida-projects/"},
+                {"value": "Extending OGC-style category management and early supplier engagement practices across all markets", "quote": "He's also reorganized his team around procurement categories — giving specialists ownership over specific domains.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
             ],
             "threats": [
-                {"value": "Tariff and trade policy volatility", "quote": "Tariffs make cost estimations harder.", "source_url": "https://www.youtube.com/watch?v=p63u8Zabtfc"},
-                {"value": "Global supply chain disruptions", "quote": "Supply chain disruptions affecting materials.", "source_url": "https://www.youtube.com/watch?v=p63u8Zabtfc"},
-                {"value": "Competition from large EPC contractors", "quote": "Intensifying competition.", "source_url": "https://www.kiewit.com"}
+                {"value": "Material procurement representing up to half of total installed cost, increasing exposure to commodity and logistics shocks", "quote": "Depending on the project, material procurement can account for up to 50% of total installed costs.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                {"value": "Global shipping issues such as canal congestion adding weeks to lead times and stressing project schedules", "quote": "We rerouted shipments through Los Angeles and handled final delivery by train and truck.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+                {"value": "Competitive EPC contractors investing aggressively in digital procurement and ESG branding", "quote": "The EPC model streamlines execution with a single contractor managing design, procurement and construction.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"}
             ]
         },
         "industry_mapping": {
-            "original_industry": "Engineering, Procurement and Construction (EPC) for infrastructure and industrial projects",
+            "original_industry": "Engineering, Procurement and Construction (EPC) services",
             "bxt_l2": "Engineering, architecture and construction management",
             "median_projected_savings_rate": 0.02371
         }
@@ -173,7 +229,13 @@ def get_company_data(name):
     return None
 
 def src(value, quote, url):
-    return f'<span class="with-source">{value}<span class="source-tooltip"><strong>📝 Source:</strong><br>"{quote}"<br><br><a href="{url}" target="_blank">🔗 View Source</a></span></span>'
+    if not quote or not url:
+        return f'<span style="color:#2d2d2d;">{value}</span>'
+    return f'''<span class="with-source">{value}<span class="source-tooltip">
+        <strong>📝 Source:</strong>
+        <div class="source-quote">"{quote}"</div>
+        <a href="{url}" target="_blank">🔗 View Source</a>
+    </span></span>'''
 
 def meta_card(label, value, quote=None, url=None):
     val = src(value, quote, url) if quote else value
@@ -191,13 +253,10 @@ def swot_item(title, items, swot_type):
     return f'<div class="swot-item swot-{swot_type}"><strong>{title}</strong><ul style="margin-top:8px;padding-left:20px;">{html}</ul></div>'
 
 def check_criteria(co):
-    """Check if company meets NAM/LATAM + >10B revenue criteria"""
     geo_scope = co.get("operational_footprint", {}).get("geographic_scope", "")
-    revenue = co.get("financials", {}).get("revenue_2024", {}).get("value", 0)
-    
+    revenue = co.get("financials", {}).get("revenue_2024", {}).get("value", 0) or 0
     is_nam_latam = geo_scope in ["NAM", "LATAM", "NAM/LATAM"]
     is_over_10b = revenue > 10
-    
     return is_nam_latam, is_over_10b, geo_scope, revenue
 
 # Header
@@ -239,8 +298,6 @@ if search:
                 st.markdown(info_item("Ownership Type", own["value"], own["quote"], own["source_url"]), unsafe_allow_html=True)
                 emp = co["workforce"]["total_employees"]
                 st.markdown(info_item("Total Employees", f'{emp["value"]:,}', emp["quote"], emp["source_url"]), unsafe_allow_html=True)
-                eq = co["workforce"]["equipment_fleet"]
-                st.markdown(info_item("Equipment Fleet", f'{eq["value"]:,} units', eq["quote"], eq["source_url"]), unsafe_allow_html=True)
             with c2:
                 st.markdown(section_header("Business Segments", "📊"), unsafe_allow_html=True)
                 segs = "".join([f'<span class="badge badge-info">{s}</span>' for s in co["operational_footprint"]["business_segments"]])
@@ -252,15 +309,6 @@ if search:
             st.markdown(section_header("Primary Markets", "🎯"), unsafe_allow_html=True)
             mkts = "".join([f'<div class="info-item"><strong>✓</strong>{src(m["value"], m["quote"], m["source_url"])}</div>' for m in co["company_overview"]["primary_markets"]])
             st.markdown(f'<div class="card">{mkts}</div>', unsafe_allow_html=True)
-            
-            st.markdown(section_header("Industry Classification", "🏷️"), unsafe_allow_html=True)
-            c1, c2 = st.columns(2)
-            with c1:
-                st.markdown("**NAICS Codes**")
-                st.dataframe(pd.DataFrame([{"Code": n["code"], "Title": n["title"]} for n in co["company_overview"]["naics_codes"]]), use_container_width=True, hide_index=True)
-            with c2:
-                st.markdown("**SIC Codes**")
-                st.dataframe(pd.DataFrame([{"Code": s["code"], "Title": s["title"]} for s in co["company_overview"]["sic_codes"]]), use_container_width=True, hide_index=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(section_header("Supply Chain & Procurement", "🔗"), unsafe_allow_html=True)
@@ -312,42 +360,30 @@ if search:
         with tab2:
             st.markdown(section_header("Financial Overview", "💰"), unsafe_allow_html=True)
             r24 = co['financials']['revenue_2024']
-            r23 = co['financials']['revenue_2023']
-            yoy = ((r24['value'] - r23['value']) / r23['value']) * 100
             
             c1, c2, c3 = st.columns(3)
             with c1:
                 rev24_html = src(f"${r24['value']}B", r24["quote"], r24["source_url"])
                 st.markdown(f'<div class="metric-card"><div class="label">2024 Revenue</div><div class="value">{rev24_html}</div><div class="label">USD</div></div>', unsafe_allow_html=True)
             with c2:
-                rev23_html = src(f"${r23['value']}B", r23["quote"], r23["source_url"])
-                st.markdown(f'<div class="metric-card"><div class="label">2023 Revenue</div><div class="value">{rev23_html}</div><div class="label">USD</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card"><div class="label">Geographic Scope</div><div class="value">{co["operational_footprint"]["geographic_scope"]}</div><div class="label">Region</div></div>', unsafe_allow_html=True)
             with c3:
-                st.markdown(f'<div class="metric-card"><div class="label">YoY Change</div><div class="value">{yoy:.1f}%</div><div class="label">2023 → 2024</div></div>', unsafe_allow_html=True)
+                emp = co['workforce']['total_employees']
+                emp_html = src(f"{emp['value']:,}", emp["quote"], emp["source_url"])
+                st.markdown(f'<div class="metric-card"><div class="label">Employees</div><div class="value">{emp_html}</div><div class="label">2024</div></div>', unsafe_allow_html=True)
             
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown(section_header("Asset Information", "🏗️"), unsafe_allow_html=True)
-            c1, c2 = st.columns(2)
-            eq = co['workforce']['equipment_fleet']
-            ev = co['financials']['equipment_replacement_value']
-            with c1:
-                st.markdown(info_item("Equipment Fleet", f'{eq["value"]:,} units', eq["quote"], eq["source_url"]), unsafe_allow_html=True)
-            with c2:
-                st.markdown(info_item("Replacement Value", f'${ev["value"]}B USD', ev["quote"], ev["source_url"]), unsafe_allow_html=True)
             st.markdown(f'<div class="warning-box"><strong>⚠️ Note:</strong> {co["financials"]["source_note"]}</div>', unsafe_allow_html=True)
             
             st.markdown("<hr style='margin:40px 0;border:none;border-top:2px solid #E4E4E4;'>", unsafe_allow_html=True)
             
             st.markdown(section_header("Cost Optimization Projection", "📈"), unsafe_allow_html=True)
             
-            # Check criteria for BXT_L2 savings
             is_nam_latam, is_over_10b, geo_scope, revenue = check_criteria(co)
             meets_criteria = is_nam_latam and is_over_10b
             
             mp = co["industry_mapping"]
             bxt_l2 = mp["bxt_l2"]
             
-            # Get the appropriate savings rate
             if meets_criteria:
                 rate = BXT_L2_SAVINGS.get(bxt_l2, BXT_L2_SAVINGS["Default"])
                 criteria_status = "✅ MEETS CRITERIA"
@@ -357,9 +393,8 @@ if search:
                 criteria_status = "❌ DOES NOT MEET CRITERIA"
                 criteria_color = "#C12D27"
             
-            # Criteria Box
             st.markdown(f'''<div class="criteria-box">
-                <strong>📋 BXT_L2 Savings Rate Criteria</strong>
+                <strong style="color:#2d2d2d;">📋 BXT_L2 Savings Rate Criteria</strong>
                 <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
                     <div style="padding:12px;background:#fafbfc;border-radius:8px;">
                         <div style="font-size:0.75rem;color:#666;text-transform:uppercase;">Geographic Scope</div>
@@ -379,8 +414,7 @@ if search:
                 </div>
             </div>''', unsafe_allow_html=True)
             
-            # Industry Mapping Box
-            st.markdown(f'''<div class="mapping-box"><strong>🏭 Industry Mapping</strong><div style="display:flex;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
+            st.markdown(f'''<div class="mapping-box"><strong style="color:#2d2d2d;">🏭 Industry Mapping</strong><div style="display:flex;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
                 <div style="background:#FFF;padding:12px 16px;border-radius:8px;border:2px solid #006492;"><div style="font-size:0.7rem;color:#666;text-transform:uppercase;">Original Industry</div><div style="font-size:0.9rem;color:#2d2d2d;font-weight:500;">{mp["original_industry"]}</div></div>
                 <span style="font-size:1.5rem;color:#1B5E5C;margin:0 12px;">→</span>
                 <div style="background:#FFF;padding:12px 16px;border-radius:8px;border:2px solid #1B5E5C;"><div style="font-size:0.7rem;color:#666;text-transform:uppercase;">BXT_L2 Classification</div><div style="font-size:0.9rem;color:#1B5E5C;font-weight:600;">{bxt_l2}</div></div>
@@ -390,50 +424,58 @@ if search:
             
             st.markdown("<br>", unsafe_allow_html=True)
             
+            # Total Addressable Spend section
+            total_revenue = revenue * 1000  # Convert to millions
+            
             c1, c2 = st.columns([1, 1])
             with c1:
-                st.markdown("### 💵 Total Addressable Market (TAM)")
-                tam = st.number_input("TAM (USD millions)", min_value=0.0, max_value=100000.0, value=100.0, step=10.0, format="%.2f")
-                st.markdown("### 📊 TAM Percentage for Calculation")
-                tam_pct = st.slider("Select % of TAM to use", min_value=0, max_value=100, value=100, step=5)
+                st.markdown('<p class="input-label">💵 Total Addressable Spend (% of Revenue)</p>', unsafe_allow_html=True)
+                spend_pct = st.slider("Select % of Revenue as Addressable Spend", min_value=0, max_value=100, value=30, step=5, help="Percentage of total revenue that represents addressable procurement spend")
+                
+                addressable_spend = total_revenue * (spend_pct / 100)
+                st.markdown(f'''<div class="info-box">
+                    <strong>📊 Calculation:</strong><br>
+                    Revenue: <strong>${total_revenue:,.0f}M</strong> × {spend_pct}% = <strong>${addressable_spend:,.2f}M</strong> Addressable Spend
+                </div>''', unsafe_allow_html=True)
+                
             with c2:
-                st.markdown("### 📋 Savings Parameters")
-                st.markdown(f'<div class="meta-card"><div class="meta-label">BXT_L2 Category</div><div class="meta-value">{bxt_l2}</div></div>', unsafe_allow_html=True)
+                st.markdown('<p class="input-label">📋 Savings Parameters</p>', unsafe_allow_html=True)
+                st.markdown(f'<div class="meta-card"><div class="meta-label">BXT_L2 Category</div><div class="meta-value" style="font-size:0.95rem;">{bxt_l2}</div></div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="meta-card" style="margin-top:12px;"><div class="meta-label">Median Savings Rate</div><div class="meta-value">{rate*100:.4f}%</div></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="meta-card" style="margin-top:12px;"><div class="meta-label">TAM % Applied</div><div class="meta-value">{tam_pct}%</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="meta-card" style="margin-top:12px;"><div class="meta-label">Total Addressable Spend</div><div class="meta-value">${addressable_spend:,.2f}M</div></div>', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
-            adj_tam = tam * (tam_pct / 100)
-            proj = adj_tam * rate
-            cons = adj_tam * (rate * 0.7)
-            opt = adj_tam * (rate * 1.3)
+            
+            # Calculations based on addressable spend
+            proj = addressable_spend * rate
+            cons = addressable_spend * (rate * 0.7)
+            opt = addressable_spend * (rate * 1.3)
             
             st.markdown(section_header("Projected Savings Analysis", "💰"), unsafe_allow_html=True)
-            st.markdown(f'<div class="info-box"><strong>📊 Calculation Base:</strong> TAM ${tam:,.2f}M × {tam_pct}% = <strong>${adj_tam:,.2f}M</strong></div>', unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.markdown(f'<div class="metric-card-warning"><div class="label">Conservative (70%)</div><div class="value">${cons:,.2f}M</div><div class="label">{rate*70:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card-warning"><div class="label">Conservative (70%)</div><div class="value">${cons:,.2f}M</div><div class="label">{rate*70:.4f}% of Spend</div></div>', unsafe_allow_html=True)
             with c2:
-                st.markdown(f'<div class="metric-card"><div class="label">Median Projection</div><div class="value">${proj:,.2f}M</div><div class="label">{rate*100:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card"><div class="label">Median Projection</div><div class="value">${proj:,.2f}M</div><div class="label">{rate*100:.4f}% of Spend</div></div>', unsafe_allow_html=True)
             with c3:
-                st.markdown(f'<div class="metric-card-success"><div class="label">Optimistic (130%)</div><div class="value">${opt:,.2f}M</div><div class="label">{rate*130:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card-success"><div class="label">Optimistic (130%)</div><div class="value">${opt:,.2f}M</div><div class="label">{rate*130:.4f}% of Spend</div></div>', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(section_header("Savings Breakdown", "📋"), unsafe_allow_html=True)
             df = pd.DataFrame({
                 'Scenario': ['Conservative (70%)', 'Median', 'Optimistic (130%)'],
                 'Savings Rate': [f"{rate*70:.4f}%", f"{rate*100:.4f}%", f"{rate*130:.4f}%"],
-                'Adjusted TAM': [f"${adj_tam:,.2f}M"]*3,
+                'Addressable Spend': [f"${addressable_spend:,.2f}M"]*3,
                 'Projected Savings': [f"${cons:,.2f}M", f"${proj:,.2f}M", f"${opt:,.2f}M"]
             })
             st.dataframe(df, use_container_width=True, hide_index=True)
             
-            st.markdown(f'''<div class="info-box"><strong>📝 Methodology:</strong>
+            st.markdown(f'''<div class="info-box"><strong style="color:#2d2d2d;">📝 Methodology:</strong>
                 <ul style="margin-top:8px;padding-left:20px;color:#2d2d2d;">
                     <li>Industry "<strong>{mp["original_industry"]}</strong>" mapped to BXT_L2 "<strong>{bxt_l2}</strong>"</li>
-                    <li>Median Projected Savings Rate for BXT_L2 (NAM/LATAM, >$10B): <strong>{rate*100:.4f}%</strong></li>
-                    <li>Criteria: Geographic Scope = NAM/LATAM AND Revenue > $10B</li>
+                    <li>Total Addressable Spend = Revenue (${total_revenue:,.0f}M) × {spend_pct}% = <strong>${addressable_spend:,.2f}M</strong></li>
+                    <li>Median Projected Savings Rate (NAM/LATAM, >$10B): <strong>{rate*100:.4f}%</strong></li>
                     <li>Conservative: 30% reduction / Optimistic: 30% increase from median</li>
                 </ul>
             </div>''', unsafe_allow_html=True)
@@ -444,12 +486,13 @@ else:
         <h2 style="color:#1B5E5C !important;">👋 Welcome to the Company Intelligence Dashboard</h2>
         <p style="font-size:1.1rem;color:#666 !important;margin-top:16px;">Enter a company name in the search bar above to view detailed information.</p>
         <p style="color:#999 !important;margin-top:24px;"><strong>Available:</strong> Kiewit Corporation</p>
-        <p style="color:#666 !important;margin-top:16px;font-size:0.9rem;">💡 <strong>Tip:</strong> Hover over any value to see the source quote and link</p>
+        <p style="color:#666 !important;margin-top:16px;font-size:0.9rem;">💡 <strong>Tip:</strong> Hover over any underlined value to see the source quote and link</p>
     </div>''', unsafe_allow_html=True)
 
 st.markdown('''<div class="footer">
     <p style="color:#2d2d2d !important;"><strong>Company Intelligence Dashboard</strong></p>
     <p style="color:#666 !important;">Due Diligence & Procurement Analysis Platform</p>
-    <p style="margin-top:10px;font-size:0.85em;color:#888 !important;">This report is for informational purposes only. 💡 Hover over values to see sources.</p>
+    <p style="margin-top:10px;font-size:0.85em;color:#888 !important;">This report is for informational purposes only. 💡 Hover over underlined values to see sources.</p>
 </div>''', unsafe_allow_html=True)
+
 
