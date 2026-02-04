@@ -55,8 +55,21 @@ st.markdown("""
     .source-tooltip a {color: #A5CD24 !important; text-decoration: underline;}
     .source-tooltip strong {color: #FFF !important;}
     .footer {background: #E4E4E4; padding: 24px; border-radius: 8px; margin-top: 32px; font-size: 0.875rem; color: #666 !important; text-align: center;}
+    .criteria-box {background: #FFF; border: 2px solid #1B5E5C; border-radius: 8px; padding: 16px; margin: 16px 0;}
+    .criteria-met {color: #A5CD24; font-weight: bold;}
+    .criteria-not-met {color: #C12D27; font-weight: bold;}
 </style>
 """, unsafe_allow_html=True)
+
+# BXT_L2 Median Savings Rates (for NAM/LATAM + Revenue >10B)
+BXT_L2_SAVINGS = {
+    "Engineering, architecture and construction management": 0.02371,
+    "Heavy Construction & Engineering": 0.045,
+    "General Contractors": 0.038,
+    "Oil & Gas": 0.048,
+    "Mining": 0.041,
+    "Default": 0.04
+}
 
 # Data
 COMPANY_DATA = {
@@ -88,7 +101,8 @@ COMPANY_DATA = {
                 {"value": "Canada", "quote": "Kiewit operates across North America.", "source_url": "https://www.kiewit.com"},
                 {"value": "International projects", "quote": "Kiewit has served domestic and international OGC companies.", "source_url": "https://www.kiewit.com.au"}
             ],
-            "business_segments": ["Transportation", "Power", "Oil, Gas & Chemical", "Water/Wastewater", "Mining", "Industrial/Building", "Nuclear"]
+            "business_segments": ["Transportation", "Power", "Oil, Gas & Chemical", "Water/Wastewater", "Mining", "Industrial/Building", "Nuclear"],
+            "geographic_scope": "NAM/LATAM"
         },
         "workforce": {
             "total_employees": {"value": 31800, "quote": "31,800 STAFF & CRAFT EMPLOYEES", "source_url": "https://newsroom.kiewit.com/wp-content/uploads/2025/03/EN_Basics-Page_2025-Overview.pdf"},
@@ -176,6 +190,16 @@ def swot_item(title, items, swot_type):
     html = "".join([f'<li>{src(i["value"], i["quote"], i["source_url"])}</li>' for i in items])
     return f'<div class="swot-item swot-{swot_type}"><strong>{title}</strong><ul style="margin-top:8px;padding-left:20px;">{html}</ul></div>'
 
+def check_criteria(co):
+    """Check if company meets NAM/LATAM + >10B revenue criteria"""
+    geo_scope = co.get("operational_footprint", {}).get("geographic_scope", "")
+    revenue = co.get("financials", {}).get("revenue_2024", {}).get("value", 0)
+    
+    is_nam_latam = geo_scope in ["NAM", "LATAM", "NAM/LATAM"]
+    is_over_10b = revenue > 10
+    
+    return is_nam_latam, is_over_10b, geo_scope, revenue
+
 # Header
 st.markdown('<div class="custom-header"><h1>🏢 Company Intelligence Dashboard</h1><div class="subtitle">Due Diligence & Procurement Analysis Platform</div></div>', unsafe_allow_html=True)
 
@@ -192,14 +216,19 @@ if search:
         with tab1:
             st.markdown(section_header("Company Overview", "🏢"), unsafe_allow_html=True)
             c1, c2, c3, c4 = st.columns(4)
-            with c1: st.markdown(meta_card("Company Name", co["meta"]["company_name"]["value"], co["meta"]["company_name"]["quote"], co["meta"]["company_name"]["source_url"]), unsafe_allow_html=True)
-            with c2: st.markdown(meta_card("Jurisdiction", co["meta"]["jurisdiction"]["value"], co["meta"]["jurisdiction"]["quote"], co["meta"]["jurisdiction"]["source_url"]), unsafe_allow_html=True)
-            with c3: st.markdown(meta_card("Status", co["meta"]["listed_status"]["value"], co["meta"]["listed_status"]["quote"], co["meta"]["listed_status"]["source_url"]), unsafe_allow_html=True)
-            with c4: st.markdown(meta_card("Founded", str(co["company_overview"]["founded_year"]["value"]), co["company_overview"]["founded_year"]["quote"], co["company_overview"]["founded_year"]["source_url"]), unsafe_allow_html=True)
+            with c1: 
+                st.markdown(meta_card("Company Name", co["meta"]["company_name"]["value"], co["meta"]["company_name"]["quote"], co["meta"]["company_name"]["source_url"]), unsafe_allow_html=True)
+            with c2: 
+                st.markdown(meta_card("Jurisdiction", co["meta"]["jurisdiction"]["value"], co["meta"]["jurisdiction"]["quote"], co["meta"]["jurisdiction"]["source_url"]), unsafe_allow_html=True)
+            with c3: 
+                st.markdown(meta_card("Status", co["meta"]["listed_status"]["value"], co["meta"]["listed_status"]["quote"], co["meta"]["listed_status"]["source_url"]), unsafe_allow_html=True)
+            with c4: 
+                st.markdown(meta_card("Founded", str(co["company_overview"]["founded_year"]["value"]), co["company_overview"]["founded_year"]["quote"], co["company_overview"]["founded_year"]["source_url"]), unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
             d = co["company_overview"]["description"]
-            st.markdown(f'<div class="card"><h3>📝 Description</h3><p>{src(d["value"], d["quote"], d["source_url"])}</p></div>', unsafe_allow_html=True)
+            desc_html = src(d["value"], d["quote"], d["source_url"])
+            st.markdown(f'<div class="card"><h3>📝 Description</h3><p>{desc_html}</p></div>', unsafe_allow_html=True)
             
             c1, c2 = st.columns(2)
             with c1:
@@ -251,7 +280,16 @@ if search:
                 for dim, data in co["procurement_organization"]["maturity_dimensions"].items():
                     label = dim.replace("_", " ").title()
                     pct = (data["score"] / 5) * 100
-                    st.markdown(f'<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:0.875rem;color:#2d2d2d;">{src(label, data["quote"], data["source_url"])}</span><span style="font-size:0.875rem;font-weight:bold;color:#2d2d2d;">{data["value"]}</span></div><div class="progress-container"><div class="progress-fill" style="width:{pct}%;">{data["score"]}/5</div></div></div>', unsafe_allow_html=True)
+                    dim_src = src(label, data["quote"], data["source_url"])
+                    st.markdown(f'''<div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <span style="font-size:0.875rem;color:#2d2d2d;">{dim_src}</span>
+                            <span style="font-size:0.875rem;font-weight:bold;color:#2d2d2d;">{data["value"]}</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-fill" style="width:{pct}%;">{data["score"]}/5</div>
+                        </div>
+                    </div>''', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(section_header("Procurement SWOT", "📊"), unsafe_allow_html=True)
@@ -265,42 +303,93 @@ if search:
             
             st.markdown(section_header("Procurement Risks", "⚠️"), unsafe_allow_html=True)
             for risk in co["procurement_risks"]["key_risks"]:
-                st.markdown(f'<div class="warning-box">⚠️ {src(risk["value"], risk["quote"], risk["source_url"])}</div>', unsafe_allow_html=True)
+                risk_html = src(risk["value"], risk["quote"], risk["source_url"])
+                st.markdown(f'<div class="warning-box">⚠️ {risk_html}</div>', unsafe_allow_html=True)
             mit = co["procurement_risks"]["mitigation"]
-            st.markdown(f'<div class="success-box"><strong>✅ Risk Mitigation:</strong><br>{src(mit["value"], mit["quote"], mit["source_url"])}</div>', unsafe_allow_html=True)
+            mit_html = src(mit["value"], mit["quote"], mit["source_url"])
+            st.markdown(f'<div class="success-box"><strong>✅ Risk Mitigation:</strong><br>{mit_html}</div>', unsafe_allow_html=True)
         
         with tab2:
             st.markdown(section_header("Financial Overview", "💰"), unsafe_allow_html=True)
-            r24, r23 = co['financials']['revenue_2024'], co['financials']['revenue_2023']
+            r24 = co['financials']['revenue_2024']
+            r23 = co['financials']['revenue_2023']
             yoy = ((r24['value'] - r23['value']) / r23['value']) * 100
+            
             c1, c2, c3 = st.columns(3)
-            with c1: st.markdown(f'<div class="metric-card"><div class="label">2024 Revenue</div><div class="value">{src(f"${r24[\"value\"]}B", r24["quote"], r24["source_url"])}</div><div class="label">USD</div></div>', unsafe_allow_html=True)
-            with c2: st.markdown(f'<div class="metric-card"><div class="label">2023 Revenue</div><div class="value">{src(f"${r23[\"value\"]}B", r23["quote"], r23["source_url"])}</div><div class="label">USD</div></div>', unsafe_allow_html=True)
-            with c3: st.markdown(f'<div class="metric-card"><div class="label">YoY Change</div><div class="value">{yoy:.1f}%</div><div class="label">2023 → 2024</div></div>', unsafe_allow_html=True)
+            with c1:
+                rev24_html = src(f"${r24['value']}B", r24["quote"], r24["source_url"])
+                st.markdown(f'<div class="metric-card"><div class="label">2024 Revenue</div><div class="value">{rev24_html}</div><div class="label">USD</div></div>', unsafe_allow_html=True)
+            with c2:
+                rev23_html = src(f"${r23['value']}B", r23["quote"], r23["source_url"])
+                st.markdown(f'<div class="metric-card"><div class="label">2023 Revenue</div><div class="value">{rev23_html}</div><div class="label">USD</div></div>', unsafe_allow_html=True)
+            with c3:
+                st.markdown(f'<div class="metric-card"><div class="label">YoY Change</div><div class="value">{yoy:.1f}%</div><div class="label">2023 → 2024</div></div>', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(section_header("Asset Information", "🏗️"), unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             eq = co['workforce']['equipment_fleet']
             ev = co['financials']['equipment_replacement_value']
-            with c1: st.markdown(info_item("Equipment Fleet", f'{eq["value"]:,} units', eq["quote"], eq["source_url"]), unsafe_allow_html=True)
-            with c2: st.markdown(info_item("Replacement Value", f'${ev["value"]}B USD', ev["quote"], ev["source_url"]), unsafe_allow_html=True)
+            with c1:
+                st.markdown(info_item("Equipment Fleet", f'{eq["value"]:,} units', eq["quote"], eq["source_url"]), unsafe_allow_html=True)
+            with c2:
+                st.markdown(info_item("Replacement Value", f'${ev["value"]}B USD', ev["quote"], ev["source_url"]), unsafe_allow_html=True)
             st.markdown(f'<div class="warning-box"><strong>⚠️ Note:</strong> {co["financials"]["source_note"]}</div>', unsafe_allow_html=True)
             
             st.markdown("<hr style='margin:40px 0;border:none;border-top:2px solid #E4E4E4;'>", unsafe_allow_html=True)
             
             st.markdown(section_header("Cost Optimization Projection", "📈"), unsafe_allow_html=True)
+            
+            # Check criteria for BXT_L2 savings
+            is_nam_latam, is_over_10b, geo_scope, revenue = check_criteria(co)
+            meets_criteria = is_nam_latam and is_over_10b
+            
             mp = co["industry_mapping"]
+            bxt_l2 = mp["bxt_l2"]
+            
+            # Get the appropriate savings rate
+            if meets_criteria:
+                rate = BXT_L2_SAVINGS.get(bxt_l2, BXT_L2_SAVINGS["Default"])
+                criteria_status = "✅ MEETS CRITERIA"
+                criteria_color = "#A5CD24"
+            else:
+                rate = BXT_L2_SAVINGS["Default"]
+                criteria_status = "❌ DOES NOT MEET CRITERIA"
+                criteria_color = "#C12D27"
+            
+            # Criteria Box
+            st.markdown(f'''<div class="criteria-box">
+                <strong>📋 BXT_L2 Savings Rate Criteria</strong>
+                <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                    <div style="padding:12px;background:#fafbfc;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:#666;text-transform:uppercase;">Geographic Scope</div>
+                        <div style="font-size:1rem;font-weight:600;color:#2d2d2d;">{geo_scope}</div>
+                        <div style="font-size:0.8rem;color:{"#A5CD24" if is_nam_latam else "#C12D27"};">{"✓ NAM/LATAM" if is_nam_latam else "✗ Required: NAM/LATAM"}</div>
+                    </div>
+                    <div style="padding:12px;background:#fafbfc;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:#666;text-transform:uppercase;">Revenue</div>
+                        <div style="font-size:1rem;font-weight:600;color:#2d2d2d;">${revenue}B USD</div>
+                        <div style="font-size:0.8rem;color:{"#A5CD24" if is_over_10b else "#C12D27"};">{"✓ >$10B" if is_over_10b else "✗ Required: >$10B"}</div>
+                    </div>
+                    <div style="padding:12px;background:#fafbfc;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:#666;text-transform:uppercase;">Status</div>
+                        <div style="font-size:1rem;font-weight:600;color:{criteria_color};">{criteria_status}</div>
+                        <div style="font-size:0.8rem;color:#666;">{"Using BXT_L2 rate" if meets_criteria else "Using default rate"}</div>
+                    </div>
+                </div>
+            </div>''', unsafe_allow_html=True)
+            
+            # Industry Mapping Box
             st.markdown(f'''<div class="mapping-box"><strong>🏭 Industry Mapping</strong><div style="display:flex;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
                 <div style="background:#FFF;padding:12px 16px;border-radius:8px;border:2px solid #006492;"><div style="font-size:0.7rem;color:#666;text-transform:uppercase;">Original Industry</div><div style="font-size:0.9rem;color:#2d2d2d;font-weight:500;">{mp["original_industry"]}</div></div>
                 <span style="font-size:1.5rem;color:#1B5E5C;margin:0 12px;">→</span>
-                <div style="background:#FFF;padding:12px 16px;border-radius:8px;border:2px solid #1B5E5C;"><div style="font-size:0.7rem;color:#666;text-transform:uppercase;">BXT_L2 Classification</div><div style="font-size:0.9rem;color:#1B5E5C;font-weight:600;">{mp["bxt_l2"]}</div></div>
+                <div style="background:#FFF;padding:12px 16px;border-radius:8px;border:2px solid #1B5E5C;"><div style="font-size:0.7rem;color:#666;text-transform:uppercase;">BXT_L2 Classification</div><div style="font-size:0.9rem;color:#1B5E5C;font-weight:600;">{bxt_l2}</div></div>
                 <span style="font-size:1.5rem;color:#1B5E5C;margin:0 12px;">→</span>
-                <div style="background:#1B5E5C;padding:12px 16px;border-radius:8px;"><div style="font-size:0.7rem;color:rgba(255,255,255,0.8);text-transform:uppercase;">Median Projected Savings Rate</div><div style="font-size:1.2rem;color:#FFF;font-weight:700;">{mp["median_projected_savings_rate"]*100:.4f}%</div></div>
+                <div style="background:#1B5E5C;padding:12px 16px;border-radius:8px;"><div style="font-size:0.7rem;color:rgba(255,255,255,0.8);text-transform:uppercase;">Median Projected Savings Rate</div><div style="font-size:1.2rem;color:#FFF;font-weight:700;">{rate*100:.4f}%</div></div>
             </div></div>''', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
-            rate = mp['median_projected_savings_rate']
+            
             c1, c2 = st.columns([1, 1])
             with c1:
                 st.markdown("### 💵 Total Addressable Market (TAM)")
@@ -309,7 +398,7 @@ if search:
                 tam_pct = st.slider("Select % of TAM to use", min_value=0, max_value=100, value=100, step=5)
             with c2:
                 st.markdown("### 📋 Savings Parameters")
-                st.markdown(f'<div class="meta-card"><div class="meta-label">BXT_L2 Category</div><div class="meta-value">{mp["bxt_l2"]}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="meta-card"><div class="meta-label">BXT_L2 Category</div><div class="meta-value">{bxt_l2}</div></div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="meta-card" style="margin-top:12px;"><div class="meta-label">Median Savings Rate</div><div class="meta-value">{rate*100:.4f}%</div></div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="meta-card" style="margin-top:12px;"><div class="meta-label">TAM % Applied</div><div class="meta-value">{tam_pct}%</div></div>', unsafe_allow_html=True)
             
@@ -323,20 +412,44 @@ if search:
             st.markdown(f'<div class="info-box"><strong>📊 Calculation Base:</strong> TAM ${tam:,.2f}M × {tam_pct}% = <strong>${adj_tam:,.2f}M</strong></div>', unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns(3)
-            with c1: st.markdown(f'<div class="metric-card-warning"><div class="label">Conservative (70%)</div><div class="value">${cons:,.2f}M</div><div class="label">{rate*70:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
-            with c2: st.markdown(f'<div class="metric-card"><div class="label">Median Projection</div><div class="value">${proj:,.2f}M</div><div class="label">{rate*100:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
-            with c3: st.markdown(f'<div class="metric-card-success"><div class="label">Optimistic (130%)</div><div class="value">${opt:,.2f}M</div><div class="label">{rate*130:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
+            with c1:
+                st.markdown(f'<div class="metric-card-warning"><div class="label">Conservative (70%)</div><div class="value">${cons:,.2f}M</div><div class="label">{rate*70:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
+            with c2:
+                st.markdown(f'<div class="metric-card"><div class="label">Median Projection</div><div class="value">${proj:,.2f}M</div><div class="label">{rate*100:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
+            with c3:
+                st.markdown(f'<div class="metric-card-success"><div class="label">Optimistic (130%)</div><div class="value">${opt:,.2f}M</div><div class="label">{rate*130:.4f}% of Adj TAM</div></div>', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(section_header("Savings Breakdown", "📋"), unsafe_allow_html=True)
-            df = pd.DataFrame({'Scenario': ['Conservative (70%)', 'Median', 'Optimistic (130%)'], 'Savings Rate': [f"{rate*70:.4f}%", f"{rate*100:.4f}%", f"{rate*130:.4f}%"], 'Adjusted TAM': [f"${adj_tam:,.2f}M"]*3, 'Projected Savings': [f"${cons:,.2f}M", f"${proj:,.2f}M", f"${opt:,.2f}M"]})
+            df = pd.DataFrame({
+                'Scenario': ['Conservative (70%)', 'Median', 'Optimistic (130%)'],
+                'Savings Rate': [f"{rate*70:.4f}%", f"{rate*100:.4f}%", f"{rate*130:.4f}%"],
+                'Adjusted TAM': [f"${adj_tam:,.2f}M"]*3,
+                'Projected Savings': [f"${cons:,.2f}M", f"${proj:,.2f}M", f"${opt:,.2f}M"]
+            })
             st.dataframe(df, use_container_width=True, hide_index=True)
             
-            st.markdown(f'<div class="info-box"><strong>📝 Methodology:</strong><ul style="margin-top:8px;padding-left:20px;color:#2d2d2d;"><li>Industry "<strong>{mp["original_industry"]}</strong>" mapped to BXT_L2 "<strong>{mp["bxt_l2"]}</strong>"</li><li>Median Projected Savings Rate: <strong>{rate*100:.4f}%</strong></li><li>Conservative: 30% reduction / Optimistic: 30% increase</li></ul></div>', unsafe_allow_html=True)
+            st.markdown(f'''<div class="info-box"><strong>📝 Methodology:</strong>
+                <ul style="margin-top:8px;padding-left:20px;color:#2d2d2d;">
+                    <li>Industry "<strong>{mp["original_industry"]}</strong>" mapped to BXT_L2 "<strong>{bxt_l2}</strong>"</li>
+                    <li>Median Projected Savings Rate for BXT_L2 (NAM/LATAM, >$10B): <strong>{rate*100:.4f}%</strong></li>
+                    <li>Criteria: Geographic Scope = NAM/LATAM AND Revenue > $10B</li>
+                    <li>Conservative: 30% reduction / Optimistic: 30% increase from median</li>
+                </ul>
+            </div>''', unsafe_allow_html=True)
     else:
         st.markdown('<div class="warning-box"><strong>⚠️ Company not found</strong><br>Try searching for "Kiewit Corporation" or "Kiewit".</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="card" style="text-align:center;padding:60px;"><h2 style="color:#1B5E5C !important;">👋 Welcome to the Company Intelligence Dashboard</h2><p style="font-size:1.1rem;color:#666 !important;margin-top:16px;">Enter a company name in the search bar above to view detailed information.</p><p style="color:#999 !important;margin-top:24px;"><strong>Available:</strong> Kiewit Corporation</p><p style="color:#666 !important;margin-top:16px;font-size:0.9rem;">💡 <strong>Tip:</strong> Hover over any value to see the source quote and link</p></div>', unsafe_allow_html=True)
+    st.markdown('''<div class="card" style="text-align:center;padding:60px;">
+        <h2 style="color:#1B5E5C !important;">👋 Welcome to the Company Intelligence Dashboard</h2>
+        <p style="font-size:1.1rem;color:#666 !important;margin-top:16px;">Enter a company name in the search bar above to view detailed information.</p>
+        <p style="color:#999 !important;margin-top:24px;"><strong>Available:</strong> Kiewit Corporation</p>
+        <p style="color:#666 !important;margin-top:16px;font-size:0.9rem;">💡 <strong>Tip:</strong> Hover over any value to see the source quote and link</p>
+    </div>''', unsafe_allow_html=True)
 
-st.markdown('<div class="footer"><p style="color:#2d2d2d !important;"><strong>Company Intelligence Dashboard</strong></p><p style="color:#666 !important;">Due Diligence & Procurement Analysis Platform</p><p style="margin-top:10px;font-size:0.85em;color:#888 !important;">This report is for informational purposes only. 💡 Hover over values to see sources.</p></div>', unsafe_allow_html=True)
+st.markdown('''<div class="footer">
+    <p style="color:#2d2d2d !important;"><strong>Company Intelligence Dashboard</strong></p>
+    <p style="color:#666 !important;">Due Diligence & Procurement Analysis Platform</p>
+    <p style="margin-top:10px;font-size:0.85em;color:#888 !important;">This report is for informational purposes only. 💡 Hover over values to see sources.</p>
+</div>''', unsafe_allow_html=True)
 
