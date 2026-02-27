@@ -502,7 +502,7 @@ if search:
               <rect x="310" y="14" width="340" height="60" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
               <rect x="310" y="14" width="340" height="3" fill="#666"/>
               <text x="480" y="38" text-anchor="middle" fill="#999" font-size="9" font-weight="700" letter-spacing="1.5">STEP 1</text>
-              <text x="480" y="58" text-anchor="middle" fill="#2d2d2d" font-size="14" font-weight="600">Analyst enters company name</text>
+              <text x="480" y="58" text-anchor="middle" fill="#2d2d2d" font-size="14" font-weight="600">User enters company name</text>
 
               <line x1="480" y1="74" x2="480" y2="112" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
 
