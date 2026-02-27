@@ -1,8 +1,13 @@
 import streamlit as st
 import pandas as pd
+import base64
+import io
 
 st.set_page_config(page_title="Company Intelligence Dashboard", page_icon="🏢", layout="wide", initial_sidebar_state="collapsed")
 
+# ══════════════════════════════════════════════════════════════════
+# CSS — Blackstone Group look & feel
+# ══════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -33,110 +38,81 @@ st.markdown("""
     .stSlider label { color: var(--text-sec) !important; }
     .stSlider [data-baseweb="slider"] [role="slider"] { background: var(--teal) !important; border-color: var(--teal) !important; }
 
+    /* Tabs — Blackstone underline style */
     .stTabs [data-baseweb="tab-list"] { background: transparent !important; border: none; border-bottom: 1px solid var(--gray); border-radius: 0; padding: 0; gap: 0; box-shadow: none; }
-    .stTabs [data-baseweb="tab"] { background: transparent !important; border-radius: 0 !important; padding: 14px 28px !important; font-family: 'DM Sans',sans-serif !important; font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0.5px !important; text-transform: none !important; color: var(--text-sec) !important; transition: all 0.3s var(--ease) !important; border-bottom: 2px solid transparent !important; margin-bottom: -1px !important; }
+    .stTabs [data-baseweb="tab"] { background: transparent !important; border-radius: 0 !important; padding: 14px 24px !important; font-family: 'DM Sans',sans-serif !important; font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0.3px !important; text-transform: none !important; color: var(--text-sec) !important; transition: all 0.3s var(--ease) !important; border-bottom: 2px solid transparent !important; margin-bottom: -1px !important; }
     .stTabs [data-baseweb="tab"]:hover { color: var(--text) !important; }
     .stTabs [aria-selected="true"] { background: transparent !important; color: var(--text) !important; border-bottom: 2px solid var(--black) !important; font-weight: 600 !important; box-shadow: none !important; }
     .stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"] { display: none !important; }
 
-    .hero { background: var(--bg-card); padding: 52px 48px 44px; margin: -1rem -1rem 0 -1rem; position: relative; border-bottom: 1px solid var(--gray); }
-    .hero-top {
-        display: flex; align-items: center; justify-content: space-between;
-        margin-bottom: 40px; position: relative; z-index: 1;
-    }
-    .hero-wordmark {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 13px; font-weight: 700;
-        letter-spacing: 3px; text-transform: uppercase;
-        color: var(--text) !important;
-    }
-    .hero-nav-link {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 12px; font-weight: 400;
-        color: var(--text-sec) !important;
-        letter-spacing: 0.5px;
-    }
-    .hero h1 {
-        font-family: 'Instrument Serif', serif;
-        font-size: clamp(40px, 5.5vw, 64px);
-        font-weight: 400; line-height: 1.08;
-        letter-spacing: -2px; color: var(--text) !important;
-        margin: 0 0 16px 0; position: relative; z-index: 1;
-    }
-    .hero h1 strong { font-weight: 400; }
-    .hero h1 em { font-style: italic; }
-    .hero-sub {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 16px; font-weight: 300;
-        color: var(--text-sec) !important;
-        max-width: 520px; line-height: 1.7;
-        margin: 0; position: relative; z-index: 1;
-    }
-    .hero-accent-bar { height: 3px; margin: 0 -1rem; background: var(--black); }
+    /* Hero — Black Blackstone header */
+    .hero { background: var(--black); padding: 40px 48px 36px; margin: -1rem -1rem 0 -1rem; position: relative; overflow: hidden; }
+    .hero::before { content:''; position:absolute; top:-40%; right:-10%; width:600px; height:600px; background:radial-gradient(circle,rgba(255,255,255,0.03) 0%,transparent 60%); pointer-events:none; }
+    .hero-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; position:relative; z-index:1; }
+    .hero-wordmark { font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#FFF !important; }
+    .hero-nav { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:400; color:rgba(255,255,255,0.4) !important; letter-spacing:0.5px; }
+    .hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(40px,5.5vw,64px); font-weight:400; line-height:1.08; letter-spacing:-2px; color:#FFF !important; margin:0 0 14px 0; position:relative; z-index:1; }
+    .hero h1 em { font-style:italic; }
+    .hero-sub { font-size:15px; font-weight:300; color:rgba(255,255,255,0.5) !important; max-width:520px; line-height:1.7; margin:0; position:relative; z-index:1; }
+    .hero-accent-bar { height:3px; margin:0 -1rem; background:linear-gradient(90deg,var(--teal),var(--blue),var(--rust)); }
 
+    /* Search */
     .search-hint { font-family:'DM Sans',sans-serif; font-size:12px; letter-spacing:1px; text-transform:uppercase; font-weight:600; color:var(--text-sec) !important; margin-bottom:12px; }
 
-    .sec-label {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 11px; letter-spacing: 2px; font-weight: 600;
-        text-transform: uppercase; color: var(--text-sec) !important;
-        margin-bottom: 12px; padding-bottom: 8px;
-        border-bottom: none;
-    }
-    .sec-title {
-        font-family: 'Instrument Serif', serif;
-        font-size: clamp(26px, 3.5vw, 36px);
-        font-weight: 400; line-height: 1.15;
-        letter-spacing: -1px; color: var(--text) !important;
-        margin-bottom: 28px;
-    }
-    .sec-title em { font-style: italic; }
+    /* Sections */
+    .sec-label { font-family:'DM Sans',sans-serif; font-size:11px; letter-spacing:2px; font-weight:600; text-transform:uppercase; color:var(--text-sec) !important; margin-bottom:12px; }
+    .sec-title { font-family:'Instrument Serif',serif; font-size:clamp(26px,3.5vw,36px); font-weight:400; line-height:1.15; letter-spacing:-1px; color:var(--text) !important; margin-bottom:28px; }
+    .sec-title em { font-style:italic; }
 
-    .meta-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--gray); border:1px solid var(--gray); border-radius:var(--r); overflow:hidden; margin-bottom:28px; box-shadow:var(--shadow-sm); }
+    /* Meta grid */
+    .meta-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--gray); border:1px solid var(--gray); border-radius:0; overflow:hidden; margin-bottom:28px; }
     .mg-cell { background:var(--bg-card); padding:24px 22px; transition:background 0.3s var(--ease); }
     .mg-cell:hover { background:var(--bg-hover); }
-    .mg-label { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text-ter) !important; margin-bottom:8px; }
+    .mg-label { font-family:'DM Sans',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--text-ter) !important; margin-bottom:8px; }
     .mg-value { font-size:14px; font-weight:600; color:var(--text) !important; line-height:1.4; }
 
-    .card { background:var(--bg-card); border:1px solid var(--gray); border-radius:var(--r); padding:28px 26px; margin-bottom:16px; box-shadow:var(--shadow-sm); transition:all 0.4s var(--ease); position:relative; overflow:hidden; }
-    .card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
-    .card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; opacity:0; background:linear-gradient(90deg,transparent,var(--teal),transparent); transition:opacity 0.4s; }
-    .card:hover::after { opacity:1; }
+    /* Card */
+    .card { background:var(--bg-card); border:1px solid var(--gray); border-radius:0; padding:28px 26px; margin-bottom:16px; box-shadow:var(--shadow-sm); transition:all 0.4s var(--ease); position:relative; overflow:hidden; }
+    .card:hover { box-shadow:var(--shadow-md); }
     .card h3 { font-family:'Instrument Serif',serif; font-size:20px; font-weight:400; color:var(--text) !important; margin-bottom:12px; }
     .card p { color:var(--text-sec) !important; font-size:14px; font-weight:300; line-height:1.8; }
 
-    .irow { padding:16px 20px; background:var(--bg-card); border:1px solid var(--gray); border-radius:12px; margin-bottom:8px; box-shadow:var(--shadow-sm); transition:all 0.3s var(--ease); }
+    /* Info rows */
+    .irow { padding:16px 20px; background:var(--bg-card); border:1px solid var(--gray); border-radius:0; margin-bottom:8px; box-shadow:var(--shadow-sm); transition:all 0.3s var(--ease); }
     .irow:hover { border-color:var(--teal-border); transform:translateX(4px); box-shadow:var(--shadow-md); }
-    .irow-label { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--text-ter) !important; margin-bottom:5px; }
+    .irow-label { font-family:'DM Sans',sans-serif; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--text-ter) !important; margin-bottom:5px; }
     .irow-val { font-size:13.5px; font-weight:400; color:var(--text) !important; line-height:1.6; }
 
+    /* Badges */
     .badge-wrap { display:flex; flex-wrap:wrap; gap:8px; }
-    .bdg { display:inline-flex; padding:6px 14px; border:1px solid var(--teal-border); border-radius:100px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--teal) !important; background:var(--teal-light); transition:all 0.3s var(--ease); }
-    .bdg:hover { background:var(--teal); color:#FFF !important; box-shadow:0 2px 8px rgba(27,94,92,0.2); }
+    .bdg { display:inline-flex; padding:6px 14px; border:1px solid var(--gray); border-radius:0; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.3px; color:var(--text) !important; background:var(--bg-muted); transition:all 0.3s var(--ease); }
+    .bdg:hover { background:var(--teal); color:#FFF !important; border-color:var(--teal); }
 
-    .met { background:var(--bg-card); border:1px solid var(--gray); border-radius:var(--r); padding:28px 20px; text-align:center; box-shadow:var(--shadow-sm); transition:all 0.4s var(--ease); position:relative; overflow:hidden; }
+    /* Metric cards */
+    .met { background:var(--bg-card); border:1px solid var(--gray); border-radius:0; padding:28px 20px; text-align:center; box-shadow:var(--shadow-sm); transition:all 0.4s var(--ease); position:relative; overflow:hidden; }
     .met:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); }
     .met::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
     .met .m-val { font-family:'JetBrains Mono',monospace; font-size:clamp(24px,3vw,36px); font-weight:600; line-height:1; margin:10px 0; }
-    .met .m-lbl { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-ter) !important; }
+    .met .m-lbl { font-family:'DM Sans',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--text-ter) !important; }
     .met-teal::before { background:var(--teal); } .met-teal .m-val { color:var(--teal) !important; }
     .met-rust::before { background:var(--rust); } .met-rust .m-val { color:var(--rust) !important; }
     .met-lime::before { background:var(--lime); } .met-lime .m-val { color:#6B8F14 !important; }
     .met-blue::before { background:var(--blue); } .met-blue .m-val { color:var(--blue) !important; }
 
+    /* Progress bars */
     .prog { margin-bottom:16px; }
     .prog-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
     .prog-name { font-size:13px; color:var(--text) !important; }
     .prog-lvl { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:var(--teal) !important; }
-    .prog-track { background:var(--gray); border-radius:6px; height:7px; overflow:hidden; }
-    .prog-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,var(--teal),var(--blue)); transition:width 0.8s var(--ease); position:relative; }
-    .prog-fill::after { content:''; position:absolute; right:0; top:0; bottom:0; width:12px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35)); border-radius:0 6px 6px 0; }
+    .prog-track { background:var(--gray); border-radius:0; height:6px; overflow:hidden; }
+    .prog-fill { height:100%; background:var(--teal); transition:width 0.8s var(--ease); }
 
-    .swot { background:var(--bg-card); border:1px solid var(--gray); border-radius:var(--r); padding:24px 22px; margin-bottom:14px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden; transition:all 0.4s var(--ease); }
+    /* SWOT */
+    .swot { background:var(--bg-card); border:1px solid var(--gray); border-radius:0; padding:24px 22px; margin-bottom:14px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden; transition:all 0.4s var(--ease); }
     .swot:hover { transform:translateX(3px); box-shadow:var(--shadow-md); }
     .swot::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; }
     .s-str::before { background:var(--lime); } .s-wk::before { background:var(--tan); } .s-op::before { background:var(--blue); } .s-th::before { background:var(--red); }
-    .swot-ttl { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:14px; }
+    .swot-ttl { font-family:'DM Sans',sans-serif; font-size:10px; letter-spacing:2px; font-weight:700; text-transform:uppercase; margin-bottom:14px; }
     .s-str .swot-ttl { color:#6B8F14 !important; } .s-wk .swot-ttl { color:var(--tan) !important; } .s-op .swot-ttl { color:var(--blue) !important; } .s-th .swot-ttl { color:var(--red) !important; }
     .swot ul { list-style:none; padding:0; margin:0; }
     .swot li { font-size:13px; color:var(--text-sec) !important; font-weight:300; line-height:1.7; padding:7px 0; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:8px; }
@@ -144,138 +120,104 @@ st.markdown("""
     .swot li::before { content:'→'; flex-shrink:0; margin-top:1px; opacity:0.4; }
     .s-str li::before { color:var(--lime); } .s-wk li::before { color:var(--tan); } .s-op li::before { color:var(--blue); } .s-th li::before { color:var(--red); }
 
-    .abox { padding:18px 22px; border-radius:12px; margin-bottom:10px; border:1px solid var(--gray); background:var(--bg-card); font-size:13px; font-weight:300; color:var(--text-sec) !important; line-height:1.7; box-shadow:var(--shadow-sm); transition:all 0.3s var(--ease); }
+    /* Alert boxes */
+    .abox { padding:18px 22px; border-radius:0; margin-bottom:10px; border:1px solid var(--gray); background:var(--bg-card); font-size:13px; font-weight:300; color:var(--text-sec) !important; line-height:1.7; box-shadow:var(--shadow-sm); transition:all 0.3s var(--ease); }
     .abox:hover { box-shadow:var(--shadow-md); }
     .a-warn { border-left:3px solid var(--rust); } .a-ok { border-left:3px solid var(--lime); } .a-info { border-left:3px solid var(--blue); }
     .abox strong { color:var(--text) !important; font-weight:600; }
 
+    /* Tooltips */
     .ws { position:relative; cursor:pointer; border-bottom:1px dotted var(--text-ter); display:inline; transition:border-color 0.3s; }
     .ws:hover { border-bottom-color:var(--teal); }
-    .tt { display:none; position:absolute; background:var(--bg-card); color:var(--text) !important; padding:16px 20px; border-radius:12px; font-size:12px; z-index:9999; max-width:400px; min-width:260px; box-shadow:0 12px 40px rgba(0,0,0,0.15); border:1px solid var(--gray); left:0; top:calc(100% + 8px); line-height:1.6; }
+    .tt { display:none; position:absolute; background:var(--bg-card); color:var(--text) !important; padding:16px 20px; border-radius:0; font-size:12px; z-index:9999; max-width:400px; min-width:260px; box-shadow:0 12px 40px rgba(0,0,0,0.15); border:1px solid var(--gray); left:0; top:calc(100% + 8px); line-height:1.6; }
     .tt::before { content:""; position:absolute; top:-12px; left:0; right:0; height:16px; background:transparent; }
     .ws:hover .tt, .tt:hover { display:block; }
     .tt strong { color:var(--teal) !important; } .tt a { color:var(--rust) !important; text-decoration:underline; font-weight:600; }
     .tt-q { font-style:italic; color:var(--text-sec) !important; margin:6px 0; padding-left:10px; border-left:2px solid var(--teal); font-size:11px; }
 
-    .crit-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--gray); border:1px solid var(--gray); border-radius:var(--r); overflow:hidden; margin:20px 0; box-shadow:var(--shadow-sm); }
+    /* Criteria & Mapping */
+    .crit-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--gray); border:1px solid var(--gray); border-radius:0; overflow:hidden; margin:20px 0; }
     .crit-cell { background:var(--bg-card); padding:22px 20px; transition:background 0.3s; }
     .crit-cell:hover { background:var(--bg-hover); }
-    .crit-lbl { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--text-ter) !important; margin-bottom:6px; }
+    .crit-lbl { font-family:'DM Sans',sans-serif; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--text-ter) !important; margin-bottom:6px; }
     .crit-val { font-size:15px; font-weight:600; color:var(--text) !important; margin-bottom:4px; }
     .crit-st { font-family:'JetBrains Mono',monospace; font-size:10px; }
-
     .map-flow { display:flex; align-items:center; gap:0; flex-wrap:wrap; margin:20px 0; }
-    .map-node { background:var(--bg-card); border:1px solid var(--gray); border-radius:12px; padding:16px 18px; flex:1; min-width:160px; box-shadow:var(--shadow-sm); transition:all 0.3s var(--ease); }
+    .map-node { background:var(--bg-card); border:1px solid var(--gray); border-radius:0; padding:16px 18px; flex:1; min-width:160px; box-shadow:var(--shadow-sm); transition:all 0.3s var(--ease); }
     .map-node:hover { box-shadow:var(--shadow-md); border-color:var(--teal-border); }
     .map-node.hl { border-color:var(--teal); background:var(--teal-light); }
-    .map-lbl { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text-ter) !important; margin-bottom:5px; }
+    .map-lbl { font-family:'DM Sans',sans-serif; font-size:9px; letter-spacing:2px; text-transform:uppercase; font-weight:600; color:var(--text-ter) !important; margin-bottom:5px; }
     .map-val { font-size:13px; font-weight:500; color:var(--text) !important; line-height:1.4; }
     .map-node.hl .map-val { color:var(--teal) !important; font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; }
     .map-arrow { font-size:16px; color:var(--text-ter); padding:0 10px; flex-shrink:0; opacity:0.3; }
 
-    .divider { height:1px; margin:36px 0; background:linear-gradient(90deg,transparent,var(--gray),transparent); }
-    .slider-lbl { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-sec) !important; margin-bottom:10px; }
+    /* Misc */
+    .divider { height:1px; margin:36px 0; background:var(--gray); }
+    .slider-lbl { font-family:'DM Sans',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--text-sec) !important; margin-bottom:10px; }
     .dark-footer { padding:32px 0; border-top:1px solid var(--gray); margin-top:48px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
     .dark-footer span { font-family:'DM Sans',sans-serif; font-size:11px; color:var(--text-ter) !important; letter-spacing:0.5px; }
 
-    .welcome { background:var(--bg-card); border:1px solid var(--gray); border-radius:0; padding:80px 48px; text-align:center; box-shadow:none; position:relative; overflow:hidden; }
-    .welcome::before { display:none; }
-    .welcome h2 { font-family:'Instrument Serif',serif; font-size:clamp(28px,4vw,44px); font-weight:400; letter-spacing:-1px; color:var(--text) !important; position:relative; margin-bottom:16px; }
+    /* Welcome */
+    .welcome { background:var(--bg-card); border:1px solid var(--gray); border-radius:0; padding:80px 48px; text-align:center; }
+    .welcome h2 { font-family:'Instrument Serif',serif; font-size:clamp(28px,4vw,44px); font-weight:400; letter-spacing:-1px; color:var(--text) !important; margin-bottom:16px; }
     .welcome h2 em { font-style:italic; }
-    .welcome p { color:var(--text-sec) !important; font-size:16px; font-weight:300; position:relative; line-height:1.7; max-width:520px; margin:0 auto; }
-    .welcome .avail { display:inline-block; padding:8px 20px; margin-top:32px; border:1px solid var(--gray); border-radius:0; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; color:var(--text) !important; background:var(--bg-muted); position:relative; letter-spacing:0.5px; }
-    .welcome .avail::before { display:none; }
-    .welcome .tip { margin-top:24px; font-family:'DM Sans',sans-serif; font-size:11px; letter-spacing:0.5px; color:var(--text-ter) !important; position:relative; text-transform:none; }
-    .notfound { background:var(--bg-card); border:1px solid var(--gray); border-left:3px solid var(--rust); border-radius:12px; padding:28px; text-align:center; box-shadow:var(--shadow-sm); }
+    .welcome p { color:var(--text-sec) !important; font-size:16px; font-weight:300; line-height:1.7; max-width:520px; margin:0 auto; }
+    .welcome .avail { display:inline-block; padding:8px 20px; margin-top:32px; border:1px solid var(--gray); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; color:var(--text) !important; background:var(--bg-muted); }
+    .welcome .tip { margin-top:24px; font-size:11px; color:var(--text-ter) !important; }
+    .notfound { background:var(--bg-card); border:1px solid var(--gray); border-left:3px solid var(--rust); padding:28px; text-align:center; }
     .notfound strong { color:var(--rust) !important; } .notfound p { color:var(--text-sec) !important; margin-top:6px; }
+
+    /* ══ FLOW DIAGRAM TAB ══ */
+    .flow-container { margin:24px 0; }
+    .flow-step { display:flex; align-items:stretch; margin-bottom:0; position:relative; }
+    .flow-line { width:48px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; }
+    .flow-dot { width:14px; height:14px; border-radius:50%; border:3px solid; background:var(--bg); flex-shrink:0; z-index:1; }
+    .flow-connector { width:2px; flex:1; }
+    .flow-content { flex:1; padding:0 0 32px 20px; }
+    .flow-step-label { font-family:'DM Sans',sans-serif; font-size:9px; letter-spacing:2px; text-transform:uppercase; font-weight:700; margin-bottom:4px; }
+    .flow-step-title { font-family:'Instrument Serif',serif; font-size:22px; font-weight:400; color:var(--text) !important; margin-bottom:8px; }
+    .flow-step-desc { font-size:13px; color:var(--text-sec) !important; font-weight:300; line-height:1.7; }
+    .flow-badge { display:inline-block; padding:3px 10px; font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-top:10px; }
+    .flow-badge-ext { background:var(--blue-light); color:var(--blue) !important; border:1px solid rgba(0,100,146,0.2); }
+    .flow-badge-int { background:var(--teal-light); color:var(--teal) !important; border:1px solid var(--teal-border); }
+    .flow-badge-out { background:var(--rust-light); color:var(--rust) !important; border:1px solid rgba(169,82,40,0.2); }
+
+    /* Download button */
+    .dl-btn { display:inline-block; padding:12px 28px; background:var(--black); color:#FFF !important; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.5px; text-decoration:none; border:none; transition:all 0.3s; cursor:pointer; margin-top:16px; }
+    .dl-btn:hover { background:var(--teal); }
 
     @media (max-width:768px) { .meta-grid{grid-template-columns:repeat(2,1fr);} .crit-grid{grid-template-columns:1fr;} .map-flow{flex-direction:column;align-items:stretch;} .map-arrow{transform:rotate(90deg);text-align:center;padding:4px 0;} }
 </style>
 """, unsafe_allow_html=True)
 
+# ══════════════════════════════════════════════════════════════════
+# DATA
+# ══════════════════════════════════════════════════════════════════
 BXT_L2_SAVINGS = {"Engineering, architecture and construction management": 0.02371, "Heavy Construction & Engineering": 0.045, "General Contractors": 0.038, "Oil & Gas": 0.048, "Mining": 0.041, "Default": 0.04}
 
 COMPANY_DATA = {
     "kiewit": {
-        "meta": {
-            "company_name": {"value": "Kiewit Corporation", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"},
-            "jurisdiction": {"value": "United States, Canada and Mexico", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
-            "listed_status": {"value": "Private (employee-owned)", "quote": "With its roots dating back to 1884, the employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}
-        },
-        "company_overview": {
-            "description": {"value": "Kiewit Corporation is one of North America's largest construction and engineering organizations, delivering end-to-end engineering, procurement and construction (EPC) services for critical infrastructure and energy projects.", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"},
-            "founded_year": {"value": 1884, "quote": "With its roots dating back to 1884, the employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
-            "headquarters": {"value": "Omaha, Nebraska, United States", "quote": "The Kiewit Corporation is a Fortune 500 contractor business headquartered in Omaha.", "source_url": "http://www.omahaimc.org/kiewit-corporation/"},
-            "primary_industry": {"value": "Engineering, Procurement and Construction (EPC) services", "quote": "The EPC model streamlines execution with a single contractor managing design, procurement and construction.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"},
-            "primary_markets": [
-                {"value": "Transportation", "quote": "Kiewit offers construction and engineering services in transportation.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Oil, Gas & Chemical", "quote": "Kiewit offers construction and engineering services in oil, gas and chemical.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Power", "quote": "Kiewit offers construction and engineering services in power.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Building", "quote": "Kiewit offers construction and engineering services in building.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Marine", "quote": "Kiewit offers construction and engineering services in marine.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Water / Wastewater", "quote": "Kiewit offers construction and engineering services in water/wastewater.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Industrial", "quote": "Kiewit offers construction and engineering services in industrial.", "source_url": "https://www.linkedin.com/company/kiewit"},
-                {"value": "Mining", "quote": "Kiewit offers construction and engineering services in mining.", "source_url": "https://www.linkedin.com/company/kiewit"}
-            ],
-        },
-        "operational_footprint": {
-            "regions_of_operation": [
-                {"value": "United States", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
-                {"value": "Canada", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"},
-                {"value": "Mexico", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}
-            ],
-            "business_segments": ["Transportation", "Oil, Gas & Chemical", "Power", "Building", "Marine", "Water/Wastewater", "Industrial", "Mining"],
-            "geographic_scope": "NAM/LATAM"
-        },
-        "workforce": {"total_employees": {"value": 31800, "quote": "16.8 BILLION 31,800 EMPLOYEES 2024 REVENUE 2024 EMPLOYEES", "source_url": "https://www.kiewit.com/wp-content/uploads/2025/09/EN_2024-Sustainability-Report-reduced.pdf"}},
-        "financials": {"revenue_2024": {"value": 16.8, "quote": "Proven Results. $16.8B 2024 Revenues 31,800 Craft and Staff Employees", "source_url": "https://www.kiewit.com"}, "source_note": "Private company – estimates only; no official statutory filings."},
-        "ownership_structure": {"ownership_type": {"value": "Privately held, employee-owned organization", "quote": "Kiewit's diversified services and unique network of decentralized offices — backed by a multi-billion-dollar, employee-owned organization.", "source_url": "https://www.kiewit.com/about-us/"}},
+        "meta": {"company_name": {"value": "Kiewit Corporation", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"}, "jurisdiction": {"value": "United States, Canada and Mexico", "quote": "The employee-owned organization operates through a network of subsidiaries in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}, "listed_status": {"value": "Private (employee-owned)", "quote": "With its roots dating back to 1884, the employee-owned organization operates.", "source_url": "https://www.forbes.com/companies/kiewit/"}},
+        "company_overview": {"description": {"value": "Kiewit Corporation is one of North America's largest construction and engineering organizations, delivering end-to-end EPC services for critical infrastructure and energy projects.", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"}, "founded_year": {"value": 1884, "quote": "With its roots dating back to 1884.", "source_url": "https://www.forbes.com/companies/kiewit/"}, "headquarters": {"value": "Omaha, Nebraska, United States", "quote": "The Kiewit Corporation is a Fortune 500 contractor business headquartered in Omaha.", "source_url": "http://www.omahaimc.org/kiewit-corporation/"}, "primary_industry": {"value": "Engineering, Procurement and Construction (EPC) services", "quote": "The EPC model streamlines execution with a single contractor managing design, procurement and construction.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"}, "primary_markets": [{"value": "Transportation", "quote": "Kiewit offers construction and engineering services in transportation.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Oil, Gas & Chemical", "quote": "Kiewit offers services in oil, gas and chemical.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Power", "quote": "Kiewit offers services in power.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Building", "quote": "Kiewit offers services in building.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Marine", "quote": "Kiewit offers services in marine.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Water / Wastewater", "quote": "Kiewit offers services in water/wastewater.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Industrial", "quote": "Kiewit offers services in industrial.", "source_url": "https://www.linkedin.com/company/kiewit"}, {"value": "Mining", "quote": "Kiewit offers services in mining.", "source_url": "https://www.linkedin.com/company/kiewit"}]},
+        "operational_footprint": {"regions_of_operation": [{"value": "United States", "quote": "Operates in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}, {"value": "Canada", "quote": "Operates in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}, {"value": "Mexico", "quote": "Operates in the United States, Canada and Mexico.", "source_url": "https://www.forbes.com/companies/kiewit/"}], "business_segments": ["Transportation", "Oil, Gas & Chemical", "Power", "Building", "Marine", "Water/Wastewater", "Industrial", "Mining"], "geographic_scope": "NAM/LATAM"},
+        "workforce": {"total_employees": {"value": 31800, "quote": "31,800 EMPLOYEES 2024", "source_url": "https://www.kiewit.com/wp-content/uploads/2025/09/EN_2024-Sustainability-Report-reduced.pdf"}},
+        "financials": {"revenue_2024": {"value": 16.8, "quote": "$16.8B 2024 Revenues", "source_url": "https://www.kiewit.com"}, "source_note": "Private company – estimates only; no official statutory filings."},
+        "ownership_structure": {"ownership_type": {"value": "Privately held, employee-owned organization", "quote": "Backed by a multi-billion-dollar, employee-owned organization.", "source_url": "https://www.kiewit.com/about-us/"}},
         "procurement_organization": {
-            "overall_maturity_level": {"value": "Defined to Managed", "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-            "maturity_dimensions": {
-                "Governance & Org": {"value": "Managed", "score": 4, "quote": "Material procurement can account for up to 50% of total installed costs.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                "Process & Policy": {"value": "Defined", "score": 3, "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                "Technology & Data": {"value": "Defined", "score": 3, "quote": "Our procurement and supply chain experts leverage scale, strategy and technology.", "source_url": "https://www.kiewit.com/?lang=en-ca"},
-                "Supplier Management": {"value": "Defined", "score": 3, "quote": "The worst thing a vendor can do is hide a problem. If we know early, we can help.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                "Integration Lifecycle": {"value": "Managed", "score": 4, "quote": "Supply chain is integrated into project planning from the very beginning. We help define risk and create the roadmap.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-            },
-            "structure": {"value": "Supply chain sits between engineering and construction, ensuring materials arrive on time to support EPC execution.", "quote": "We sit between engineering and construction. Our job is to make sure materials arrive when construction needs them.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-            "category_mgmt": {"value": "Procurement organized around categories with specialists owning domains such as valves or piping.", "quote": "He's reorganized his team around procurement categories — giving specialists ownership over specific domains.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-            "cpo": {"value": "Carsten Bernstiel — VP Procurement, OGC group", "quote": "At the center is Carsten Bernstiel, Vice President of Procurement for Kiewit's Oil, Gas & Chemical group.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-        },
-        "procurement_risks": {
-            "key_risks": [
-                {"value": "High share of total installed cost tied to materials, exposing projects to price and availability risks", "quote": "Material procurement can account for up to 50% of total installed costs.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Global shipping and logistics disruptions impacting lead times", "quote": "We rerouted shipments through Los Angeles and handled final delivery by train and truck.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Dependence on timely, transparent supplier communication to resolve issues early", "quote": "The worst thing a vendor can do is hide a problem. If we know early, we can help.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-            ],
-            "mitigation": {"value": "Kiewit mitigates risk through early involvement in strategy, proactive planning, logistics rerouting, and transparent supplier communication.", "quote": "We rerouted shipments through Los Angeles and handled final delivery by train and truck.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-        },
-        "procurement_swot": {
-            "strengths": [
-                {"value": "Integrated EPC model with single contractor managing design, procurement and construction", "quote": "The EPC model streamlines execution with a single contractor managing design, procurement and construction.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"},
-                {"value": "Supply chain integrated from start of project planning, defining risk and delivery roadmap", "quote": "At Kiewit, supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Category-based procurement with domain specialists emphasizing partnership and transparency", "quote": "He's reorganized his team around procurement categories.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-            ],
-            "weaknesses": [
-                {"value": "Limited public transparency on procurement systems, KPIs and ESG vs listed peers", "quote": "Kiewit is one of North America's largest and most respected construction and engineering organizations.", "source_url": "https://www.kiewit.com/about-us/"},
-                {"value": "Advanced procurement evidence concentrated in OGC group — maturity may be uneven across markets", "quote": "Carsten Bernstiel, Vice President of Procurement for Kiewit's Oil, Gas & Chemical group.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-            ],
-            "opportunities": [
-                {"value": "Deepening AI/technology in procurement to anticipate disruptions and optimize sourcing", "quote": "This consultative role has transformed EPCs into partners — not just vendors.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Increasing ESG and supplier diversity visibility for client/regulatory alignment", "quote": "Kiewit has a long history of partnering with the local business community.", "source_url": "https://www.kiewit.com/business-with-us/opportunities/central-florida-projects/"},
-                {"value": "Extending OGC-style category management across all markets", "quote": "He's reorganized his team around procurement categories.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}
-            ],
-            "threats": [
-                {"value": "Materials up to 50% of installed cost — high exposure to commodity/logistics shocks", "quote": "Material procurement can account for up to 50% of total installed costs.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Canal congestion and global shipping adding weeks to lead times", "quote": "We rerouted shipments through Los Angeles and handled final delivery by train and truck.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
-                {"value": "Competitors investing aggressively in digital procurement and ESG branding", "quote": "The EPC model streamlines execution with a single contractor.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"}
-            ]
-        },
+            "overall_maturity_level": {"value": "Defined to Managed", "quote": "Supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+            "maturity_dimensions": {"Governance & Org": {"value": "Managed", "score": 4, "quote": "Material procurement can account for up to 50% of total installed costs.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, "Process & Policy": {"value": "Defined", "score": 3, "quote": "Supply chain is integrated into project planning from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, "Technology & Data": {"value": "Defined", "score": 3, "quote": "Procurement experts leverage scale, strategy and technology.", "source_url": "https://www.kiewit.com/?lang=en-ca"}, "Supplier Management": {"value": "Defined", "score": 3, "quote": "The worst thing a vendor can do is hide a problem.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, "Integration Lifecycle": {"value": "Managed", "score": 4, "quote": "We help define risk and create the roadmap for delivery.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}},
+            "structure": {"value": "Supply chain sits between engineering and construction, ensuring materials arrive on time.", "quote": "Our job is to make sure materials arrive when construction needs them.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+            "category_mgmt": {"value": "Organized around categories with specialists owning domains such as valves or piping.", "quote": "Reorganized team around procurement categories.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"},
+            "cpo": {"value": "Carsten Bernstiel — VP Procurement, OGC group", "quote": "Carsten Bernstiel, Vice President of Procurement for Kiewit's OGC group.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}},
+        "procurement_risks": {"key_risks": [{"value": "High share of total installed cost tied to materials", "quote": "Material procurement can account for up to 50% of total installed costs.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, {"value": "Global shipping disruptions impacting lead times", "quote": "We rerouted shipments through Los Angeles.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, {"value": "Dependence on transparent supplier communication", "quote": "The worst thing a vendor can do is hide a problem.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}], "mitigation": {"value": "Early involvement in strategy, proactive planning, logistics rerouting, and transparent supplier communication.", "quote": "We rerouted shipments through Los Angeles.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}},
+        "procurement_swot": {"strengths": [{"value": "Integrated EPC model — single contractor for design, procurement and construction", "quote": "The EPC model streamlines execution.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"}, {"value": "Supply chain integrated from start of project planning", "quote": "Supply chain is integrated from the very beginning.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, {"value": "Category-based procurement with domain specialists", "quote": "Reorganized team around procurement categories.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}], "weaknesses": [{"value": "Limited public transparency on procurement KPIs and ESG vs listed peers", "quote": "One of North America's largest organizations.", "source_url": "https://www.kiewit.com/about-us/"}, {"value": "Advanced practices concentrated in OGC group — maturity may be uneven", "quote": "VP of Procurement for Kiewit's OGC group.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}], "opportunities": [{"value": "AI/technology to anticipate disruptions and optimize sourcing", "quote": "EPCs transformed into partners — not just vendors.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, {"value": "Increasing ESG and supplier diversity visibility", "quote": "Long history of partnering with the local business community.", "source_url": "https://www.kiewit.com/business-with-us/opportunities/central-florida-projects/"}, {"value": "Extending category management across all markets", "quote": "Reorganized team around procurement categories.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}], "threats": [{"value": "Materials up to 50% of installed cost — commodity/logistics exposure", "quote": "Material procurement can account for up to 50%.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, {"value": "Canal congestion adding weeks to lead times", "quote": "We rerouted shipments through Los Angeles.", "source_url": "https://pipingtech.com/putting-the-p-in-epc-kiewits-vp-of-procurement-ogc-talks-supply-chain-risk-management/"}, {"value": "Competitors investing in digital procurement and ESG branding", "quote": "The EPC model streamlines execution.", "source_url": "https://www.kiewit.com/services-and-solutions/project-delivery/"}]},
         "industry_mapping": {"original_industry": "Engineering, Procurement and Construction (EPC) services", "bxt_l2": "Engineering, architecture and construction management", "median_projected_savings_rate": 0.02371}
     }
 }
 
+# ══════════════════════════════════════════════════════════════════
+# HELPERS
+# ══════════════════════════════════════════════════════════════════
 def get_company_data(name):
     t = name.lower().strip()
     for k, d in COMPANY_DATA.items():
@@ -299,28 +241,139 @@ def check_criteria(co):
     r = co.get("financials",{}).get("revenue_2024",{}).get("value",0) or 0
     return g in ["NAM","LATAM","NAM/LATAM"], r>10, g, r
 
-# ═══ HEADER ═══
+def generate_pdf(co):
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=60, rightMargin=60, topMargin=50, bottomMargin=50)
+    styles = getSampleStyleSheet()
+
+    teal_c = colors.HexColor("#1B5E5C")
+    rust_c = colors.HexColor("#A95228")
+    black_c = colors.HexColor("#000000")
+    gray_c = colors.HexColor("#666666")
+
+    title_s = ParagraphStyle('TitleCustom', parent=styles['Title'], fontName='Helvetica-Bold', fontSize=22, textColor=black_c, spaceAfter=6)
+    sub_s = ParagraphStyle('SubCustom', parent=styles['Normal'], fontSize=10, textColor=gray_c, spaceAfter=20)
+    h2_s = ParagraphStyle('H2Custom', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=14, textColor=teal_c, spaceBefore=20, spaceAfter=10)
+    body_s = ParagraphStyle('BodyCustom', parent=styles['Normal'], fontSize=10, leading=15, textColor=black_c)
+    label_s = ParagraphStyle('LabelCustom', parent=styles['Normal'], fontSize=8, textColor=gray_c, spaceAfter=2)
+
+    story = []
+    m = co["meta"]; ov = co["company_overview"]; fin = co["financials"]
+
+    story.append(Paragraph(f"Company Intelligence Report", title_s))
+    story.append(Paragraph(f"{m['company_name']['value']} — Confidential", sub_s))
+    story.append(HRFlowable(width="100%", thickness=2, color=black_c, spaceAfter=16))
+
+    story.append(Paragraph("Company Overview", h2_s))
+    story.append(Paragraph(ov["description"]["value"], body_s))
+    story.append(Spacer(1, 10))
+
+    info_data = [
+        ["Founded", str(ov["founded_year"]["value"]), "Headquarters", ov["headquarters"]["value"]],
+        ["Jurisdiction", m["jurisdiction"]["value"], "Status", m["listed_status"]["value"]],
+        ["Employees", f'{co["workforce"]["total_employees"]["value"]:,}', "Revenue 2024", f'${fin["revenue_2024"]["value"]}B'],
+    ]
+    t = Table(info_data, colWidths=[1.1*inch, 1.9*inch, 1.1*inch, 1.9*inch])
+    t.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'), ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+        ('TEXTCOLOR', (0,0), (0,-1), gray_c), ('TEXTCOLOR', (2,0), (2,-1), gray_c),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8), ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,-2), 0.5, colors.HexColor("#E4E4E4")),
+    ]))
+    story.append(t)
+
+    story.append(Paragraph("Procurement Organization", h2_s))
+    proc = co["procurement_organization"]
+    story.append(Paragraph(f"<b>Maturity Level:</b> {proc['overall_maturity_level']['value']}", body_s))
+    story.append(Paragraph(f"<b>Structure:</b> {proc['structure']['value']}", body_s))
+    story.append(Paragraph(f"<b>CPO:</b> {proc['cpo']['value']}", body_s))
+    story.append(Spacer(1, 8))
+    for dim, data in proc["maturity_dimensions"].items():
+        story.append(Paragraph(f"  {dim}: {data['value']} ({data['score']}/5)", body_s))
+
+    story.append(Paragraph("Procurement SWOT", h2_s))
+    for cat, label in [("strengths","Strengths"),("weaknesses","Weaknesses"),("opportunities","Opportunities"),("threats","Threats")]:
+        story.append(Paragraph(f"<b>{label}</b>", body_s))
+        for item in co["procurement_swot"][cat]:
+            story.append(Paragraph(f"  → {item['value']}", body_s))
+        story.append(Spacer(1, 6))
+
+    story.append(Paragraph("Procurement Risks", h2_s))
+    for risk in co["procurement_risks"]["key_risks"]:
+        story.append(Paragraph(f"  ⚠ {risk['value']}", body_s))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(f"<b>Mitigation:</b> {co['procurement_risks']['mitigation']['value']}", body_s))
+
+    mp = co["industry_mapping"]
+    is_nam, is_10b, geo, revenue = check_criteria(co)
+    meets = is_nam and is_10b
+    rate = BXT_L2_SAVINGS.get(mp["bxt_l2"], BXT_L2_SAVINGS["Default"]) if meets else BXT_L2_SAVINGS["Default"]
+
+    story.append(Paragraph("Cost Optimization Projection", h2_s))
+    story.append(Paragraph(f"Industry: {mp['original_industry']}  →  BXT L2: {mp['bxt_l2']}", body_s))
+    story.append(Paragraph(f"Median Savings Rate: {rate*100:.4f}%  |  Geographic Scope: {geo}  |  Revenue: ${revenue}B", body_s))
+    story.append(Spacer(1, 10))
+
+    total_rev = revenue * 1000
+    for pct in [20, 30, 40]:
+        spend = total_rev * (pct / 100)
+        proj = spend * rate
+        cons = spend * rate * 0.7
+        opt = spend * rate * 1.3
+        story.append(Paragraph(f"<b>At {pct}% addressable spend (${spend:,.0f}M):</b>  Conservative ${cons:,.2f}M  |  Median ${proj:,.2f}M  |  Optimistic ${opt:,.2f}M", body_s))
+
+    story.append(Spacer(1, 24))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=gray_c, spaceAfter=8))
+    story.append(Paragraph("Confidential — For informational purposes only. Generated by BX Company Intelligence Platform.", label_s))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf.getvalue()
+
+# ══════════════════════════════════════════════════════════════════
+# HEADER
+# ══════════════════════════════════════════════════════════════════
 st.markdown('''<div class="hero">
     <div class="hero-top">
         <span class="hero-wordmark">Blackstone</span>
-        <span class="hero-nav-link">Due Diligence & Procurement Analysis</span>
+        <span class="hero-nav">Due Diligence & Procurement Analysis</span>
     </div>
     <h1>Company<br><em>Intelligence</em></h1>
     <p class="hero-sub">Delivering actionable intelligence for institutional investors by analyzing procurement organizations, supply chains, and cost optimization opportunities.</p>
 </div><div class="hero-accent-bar"></div>''', unsafe_allow_html=True)
 
+# SEARCH
 st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
 c1, c2, c3 = st.columns([1, 2, 1])
 with c2:
     st.markdown('<div class="search-hint">Search Company</div>', unsafe_allow_html=True)
     search = st.text_input("s", placeholder="Enter company name (e.g., Kiewit Corporation)", label_visibility="collapsed")
 
+# ══════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════
 if search:
     co = get_company_data(search)
     if co:
-        tab1, tab2 = st.tabs(["General Information", "Financials & Cost Optimization"])
+        tab1, tab2, tab3 = st.tabs(["General Information", "Financials & Cost Optimization", "How It Works"])
+
+        # ─── TAB 1: GENERAL INFO ───
         with tab1:
             st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
+
+            # PDF download
+            pdf_bytes = generate_pdf(co)
+            b64 = base64.b64encode(pdf_bytes).decode()
+            company_name = co["meta"]["company_name"]["value"].replace(" ", "_")
+            st.markdown(f'<div style="text-align:right;"><a class="dl-btn" href="data:application/pdf;base64,{b64}" download="{company_name}_Intelligence_Report.pdf">↓ Download PDF Report</a></div>', unsafe_allow_html=True)
+
             st.markdown('<div class="sec-label">Overview</div>', unsafe_allow_html=True)
             st.markdown('<h2 class="sec-title">Company <em>Profile</em></h2>', unsafe_allow_html=True)
             m=co["meta"]; ov=co["company_overview"]
@@ -333,7 +386,6 @@ if search:
 
             d=ov["description"]
             st.markdown(f'<div class="card"><h3>Description</h3><p>{src(d["value"],d["quote"],d["source_url"])}</p></div>', unsafe_allow_html=True)
-
             c1,c2=st.columns(2)
             with c1:
                 st.markdown('<div class="sec-label">Corporate Structure</div>', unsafe_allow_html=True)
@@ -347,11 +399,6 @@ if search:
                 st.markdown('<div class="sec-label">Regions</div>', unsafe_allow_html=True)
                 for r in co["operational_footprint"]["regions_of_operation"]:
                     st.markdown(irow("📍",r["value"],r["quote"],r["source_url"]), unsafe_allow_html=True)
-
-            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="sec-label">Primary Markets</div>', unsafe_allow_html=True)
-            mkts="".join([f'<span class="bdg">{m_["value"]}</span>' for m_ in ov["primary_markets"]])
-            st.markdown(f'<div class="card"><div class="badge-wrap">{mkts}</div></div>', unsafe_allow_html=True)
 
             st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="sec-label">Supply Chain & Procurement</div>', unsafe_allow_html=True)
@@ -380,12 +427,12 @@ if search:
 
             st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="sec-label">Risk Assessment</div>', unsafe_allow_html=True)
-            st.markdown('<h2 class="sec-title">Procurement <em>Risks</em></h2>', unsafe_allow_html=True)
             for risk in co["procurement_risks"]["key_risks"]:
                 st.markdown(f'<div class="abox a-warn">{src(risk["value"],risk["quote"],risk["source_url"])}</div>', unsafe_allow_html=True)
             mit=co["procurement_risks"]["mitigation"]
             st.markdown(f'<div class="abox a-ok"><strong>Risk Mitigation</strong><br><br>{src(mit["value"],mit["quote"],mit["source_url"])}</div>', unsafe_allow_html=True)
 
+        # ─── TAB 2: FINANCIALS ───
         with tab2:
             st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
             st.markdown('<div class="sec-label">Financials</div>', unsafe_allow_html=True)
@@ -393,11 +440,12 @@ if search:
             r24=co['financials']['revenue_2024']; emp=co['workforce']['total_employees']
             c1,c2,c3=st.columns(3)
             with c1:
-                r24v = r24["value"]; r24q = r24["quote"]; r24u = r24["source_url"]
+                r24v=r24["value"]; r24q=r24["quote"]; r24u=r24["source_url"]
                 st.markdown(f'<div class="met met-teal"><div class="m-lbl">2024 Revenue</div><div class="m-val">{src(f"${r24v}B",r24q,r24u)}</div><div class="m-lbl">USD</div></div>', unsafe_allow_html=True)
-            with c2: st.markdown(f'<div class="met met-blue"><div class="m-lbl">Geographic Scope</div><div class="m-val">{co["operational_footprint"]["geographic_scope"]}</div><div class="m-lbl">Region</div></div>', unsafe_allow_html=True)
+            with c2:
+                st.markdown(f'<div class="met met-blue"><div class="m-lbl">Geographic Scope</div><div class="m-val">{co["operational_footprint"]["geographic_scope"]}</div><div class="m-lbl">Region</div></div>', unsafe_allow_html=True)
             with c3:
-                empv = emp["value"]; empq = emp["quote"]; empu = emp["source_url"]
+                empv=emp["value"]; empq=emp["quote"]; empu=emp["source_url"]
                 st.markdown(f'<div class="met met-rust"><div class="m-lbl">Employees</div><div class="m-val">{src(f"{empv:,}",empq,empu)}</div><div class="m-lbl">2024</div></div>', unsafe_allow_html=True)
 
             st.markdown(f'<div class="abox a-warn"><strong>Note:</strong> {co["financials"]["source_note"]}</div>', unsafe_allow_html=True)
@@ -439,7 +487,6 @@ if search:
             st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="sec-label">Results</div>', unsafe_allow_html=True)
             st.markdown('<h2 class="sec-title">Projected <em>Savings</em></h2>', unsafe_allow_html=True)
-
             c1,c2,c3=st.columns(3)
             with c1: st.markdown(f'<div class="met met-rust"><div class="m-lbl">Conservative (70%)</div><div class="m-val">${cons:,.2f}M</div><div class="m-lbl">{rate*70:.4f}% of Spend</div></div>', unsafe_allow_html=True)
             with c2: st.markdown(f'<div class="met met-teal"><div class="m-lbl">Median Projection</div><div class="m-val">${proj:,.2f}M</div><div class="m-lbl">{rate*100:.4f}% of Spend</div></div>', unsafe_allow_html=True)
@@ -448,7 +495,104 @@ if search:
             st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
             df=pd.DataFrame({'Scenario':['Conservative (70%)','Median','Optimistic (130%)'],'Savings Rate':[f"{rate*70:.4f}%",f"{rate*100:.4f}%",f"{rate*130:.4f}%"],'Addressable Spend':[f"${addressable:,.2f}M"]*3,'Projected Savings':[f"${cons:,.2f}M",f"${proj:,.2f}M",f"${opt:,.2f}M"]})
             st.dataframe(df, use_container_width=True, hide_index=True)
+
             st.markdown(f'<div class="abox a-info"><strong>Methodology</strong><br><br>Industry "<strong>{mp["original_industry"]}</strong>" mapped to BXT_L2 "<strong>{bxt}</strong>"<br>Total Addressable Spend = Revenue (${total_revenue:,.0f}M) × {spend_pct}% = <strong>${addressable:,.2f}M</strong><br>Median Projected Savings Rate (NAM/LATAM, >$10B): <strong>{rate*100:.4f}%</strong><br>Conservative: 30% reduction / Optimistic: 30% increase from median</div>', unsafe_allow_html=True)
+
+        # ─── TAB 3: HOW IT WORKS ───
+        with tab3:
+            st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sec-label">Architecture</div>', unsafe_allow_html=True)
+            st.markdown('<h2 class="sec-title">How It <em>Works</em></h2>', unsafe_allow_html=True)
+            st.markdown('<p style="color:var(--text-sec) !important;font-size:15px;font-weight:300;line-height:1.8;max-width:640px;margin-bottom:36px;">The platform combines external research from Perplexity AI with internal Blackstone data from Salesforce and Snowflake to generate a comprehensive company intelligence report with cost savings projections.</p>', unsafe_allow_html=True)
+
+            st.markdown(f'''<div class="flow-container">
+
+                <div class="flow-step">
+                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--blue);"></div><div class="flow-connector" style="background:var(--blue);opacity:0.15;"></div></div>
+                    <div class="flow-content">
+                        <div class="flow-step-label" style="color:var(--blue) !important;">Step 1 — User Input</div>
+                        <div class="flow-step-title">Company Search</div>
+                        <div class="flow-step-desc">The analyst enters a company name into the search bar. This triggers the intelligence pipeline.</div>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--blue);"></div><div class="flow-connector" style="background:var(--blue);opacity:0.15;"></div></div>
+                    <div class="flow-content">
+                        <div class="flow-step-label" style="color:var(--blue) !important;">Step 2 — External Data</div>
+                        <div class="flow-step-title">Perplexity API Request</div>
+                        <div class="flow-step-desc">The platform sends an API request to Perplexity AI with a structured prompt requesting company overview, financials, procurement organization details, SWOT analysis, and risk factors. Perplexity returns a structured JSON response with sourced data points.</div>
+                        <span class="flow-badge flow-badge-ext">External Data</span>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--blue);"></div><div class="flow-connector" style="background:var(--teal);opacity:0.15;"></div></div>
+                    <div class="flow-content">
+                        <div class="flow-step-label" style="color:var(--blue) !important;">Step 3 — Normalization</div>
+                        <div class="flow-step-title">JSON Processing & Validation</div>
+                        <div class="flow-step-desc">Python normalizes the Perplexity JSON response — validating data types, structuring nested objects (markets, regions, SWOT items), cleaning financial figures, and mapping source quotes to their URLs for traceability.</div>
+                        <span class="flow-badge flow-badge-ext">External Data</span>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--teal);"></div><div class="flow-connector" style="background:var(--teal);opacity:0.15;"></div></div>
+                    <div class="flow-content">
+                        <div class="flow-step-label" style="color:var(--teal) !important;">Step 4 — Internal Data</div>
+                        <div class="flow-step-title">BX AI Industry Mapping</div>
+                        <div class="flow-step-desc">BX AI takes the company's primary industry from the external data and maps it to our internal BXT_L2 classification taxonomy. This mapping enables comparison against our proprietary benchmarks.</div>
+                        <span class="flow-badge flow-badge-int">Internal Data</span>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--teal);"></div><div class="flow-connector" style="background:var(--teal);opacity:0.15;"></div></div>
+                    <div class="flow-content">
+                        <div class="flow-step-label" style="color:var(--teal) !important;">Step 5 — Internal Data</div>
+                        <div class="flow-step-title">Snowflake Query (Salesforce Data)</div>
+                        <div class="flow-step-desc">Using the mapped BXT_L2 classification, revenue, and geographic scope, the system queries Snowflake — which stores our Salesforce data — to find comparable companies. It retrieves median savings rates from similar engagements filtered by industry, region (NAM/LATAM), and revenue band (>$10B).</div>
+                        <span class="flow-badge flow-badge-int">Internal Data</span>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--rust);"></div><div class="flow-connector" style="background:transparent;"></div></div>
+                    <div class="flow-content">
+                        <div class="flow-step-label" style="color:var(--rust) !important;">Step 6 — Output</div>
+                        <div class="flow-step-title">Cost Savings Estimate</div>
+                        <div class="flow-step-desc">The system combines the external company profile with internal benchmarks to produce a cost optimization projection across three scenarios (conservative, median, optimistic). The analyst can adjust addressable spend percentage and download the full report as PDF.</div>
+                        <span class="flow-badge flow-badge-out">Output</span>
+                    </div>
+                </div>
+
+            </div>''', unsafe_allow_html=True)
+
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="sec-label">Data Sources</div>', unsafe_allow_html=True)
+            st.markdown('<h2 class="sec-title">Internal vs <em>External</em></h2>', unsafe_allow_html=True)
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown('''<div class="card" style="border-left:3px solid var(--blue);">
+                    <h3>External Data</h3>
+                    <p style="margin-bottom:16px;">Sourced via Perplexity AI API in real-time for each company search.</p>
+                    <div class="irow"><div class="irow-label">Company overview</div><div class="irow-val">Name, jurisdiction, founding year, headquarters, description</div></div>
+                    <div class="irow"><div class="irow-label">Financials</div><div class="irow-val">Revenue, employee count (public estimates for private companies)</div></div>
+                    <div class="irow"><div class="irow-label">Procurement org</div><div class="irow-val">Maturity assessment, structure, category management, CPO</div></div>
+                    <div class="irow"><div class="irow-label">Analysis</div><div class="irow-val">SWOT analysis, risk factors, mitigation strategies</div></div>
+                    <div class="irow"><div class="irow-label">Sources</div><div class="irow-val">Every data point includes quote and source URL for verification</div></div>
+                </div>''', unsafe_allow_html=True)
+            with c2:
+                st.markdown('''<div class="card" style="border-left:3px solid var(--teal);">
+                    <h3>Internal Data</h3>
+                    <p style="margin-bottom:16px;">Proprietary Blackstone data from Salesforce, stored and queried in Snowflake.</p>
+                    <div class="irow"><div class="irow-label">BXT_L2 Taxonomy</div><div class="irow-val">Proprietary industry classification system for benchmarking</div></div>
+                    <div class="irow"><div class="irow-label">Savings Rates</div><div class="irow-val">Median projected savings by industry, geography, and revenue band</div></div>
+                    <div class="irow"><div class="irow-label">Salesforce CRM</div><div class="irow-val">Historical engagement data, comparable company profiles</div></div>
+                    <div class="irow"><div class="irow-label">Snowflake DW</div><div class="irow-val">Analytical queries for benchmarking and similarity matching</div></div>
+                    <div class="irow"><div class="irow-label">BX AI</div><div class="irow-val">Industry mapping model that classifies companies into BXT_L2</div></div>
+                </div>''', unsafe_allow_html=True)
+
     else:
         st.markdown('<div class="notfound"><strong>Company not found</strong><p>Try searching for "Kiewit Corporation" or "Kiewit"</p></div>', unsafe_allow_html=True)
 else:
