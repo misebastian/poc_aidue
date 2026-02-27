@@ -482,71 +482,90 @@ if search:
             st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
             st.markdown('<div class="sec-label">Architecture</div>', unsafe_allow_html=True)
             st.markdown('<h2 class="sec-title">How It <em>Works</em></h2>', unsafe_allow_html=True)
-            st.markdown('<p style="color:var(--text-sec) !important;font-size:15px;font-weight:300;line-height:1.8;max-width:640px;margin-bottom:36px;">The platform combines external research from Perplexity AI with internal Blackstone data from Salesforce and Snowflake to generate a comprehensive company intelligence report with cost savings projections.</p>', unsafe_allow_html=True)
 
-            st.markdown(f'''<div class="flow-container">
+            # ── VISUAL FLOWCHART ──
+            st.markdown('''
+            <svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;margin:0 auto 40px;display:block;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+              <defs>
+                <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#999"/></marker>
+                <marker id="ah-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#006492"/></marker>
+                <marker id="ah-t" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#1B5E5C"/></marker>
+                <marker id="ah-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#A95228"/></marker>
+                <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.06"/></filter>
+              </defs>
 
-                <div class="flow-step">
-                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--blue);"></div><div class="flow-connector" style="background:var(--blue);opacity:0.15;"></div></div>
-                    <div class="flow-content">
-                        <div class="flow-step-label" style="color:var(--blue) !important;">Step 1 — User Input</div>
-                        <div class="flow-step-title">Company Search</div>
-                        <div class="flow-step-desc">The analyst enters a company name into the search bar. This triggers the intelligence pipeline.</div>
-                    </div>
-                </div>
+              <!-- ── STEP 1: User Input ── -->
+              <rect x="320" y="10" width="260" height="64" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
+              <rect x="320" y="10" width="260" height="3" fill="#006492"/>
+              <text x="450" y="36" text-anchor="middle" fill="#999" font-size="8" font-weight="700" letter-spacing="1.5">STEP 1</text>
+              <text x="450" y="56" text-anchor="middle" fill="#2d2d2d" font-size="14" font-weight="600">Analyst enters company name</text>
 
-                <div class="flow-step">
-                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--blue);"></div><div class="flow-connector" style="background:var(--blue);opacity:0.15;"></div></div>
-                    <div class="flow-content">
-                        <div class="flow-step-label" style="color:var(--blue) !important;">Step 2 — External Data</div>
-                        <div class="flow-step-title">Perplexity API Request</div>
-                        <div class="flow-step-desc">The platform sends an API request to Perplexity AI with a structured prompt requesting company overview, financials, procurement organization details, SWOT analysis, and risk factors. Perplexity returns a structured JSON response with sourced data points.</div>
-                        <span class="flow-badge flow-badge-ext">External Data</span>
-                    </div>
-                </div>
+              <!-- Arrow down -->
+              <line x1="450" y1="74" x2="450" y2="110" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
 
-                <div class="flow-step">
-                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--blue);"></div><div class="flow-connector" style="background:var(--teal);opacity:0.15;"></div></div>
-                    <div class="flow-content">
-                        <div class="flow-step-label" style="color:var(--blue) !important;">Step 3 — Normalization</div>
-                        <div class="flow-step-title">JSON Processing & Validation</div>
-                        <div class="flow-step-desc">Python normalizes the Perplexity JSON response — validating data types, structuring nested objects (markets, regions, SWOT items), cleaning financial figures, and mapping source quotes to their URLs for traceability.</div>
-                        <span class="flow-badge flow-badge-ext">External Data</span>
-                    </div>
-                </div>
+              <!-- ── STEP 2: Perplexity API ── -->
+              <rect x="260" y="112" width="380" height="80" rx="0" fill="#fff" stroke="#006492" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="260" y="112" width="380" height="3" fill="#006492"/>
+              <text x="290" y="136" fill="#006492" font-size="8" font-weight="700" letter-spacing="1.5">STEP 2 · EXTERNAL</text>
+              <text x="290" y="156" fill="#2d2d2d" font-size="14" font-weight="600">Perplexity API → Company Research</text>
+              <text x="290" y="176" fill="#999" font-size="11">Returns structured JSON with company profile, financials, procurement, SWOT</text>
+              <rect x="546" y="126" width="78" height="18" rx="0" fill="rgba(0,100,146,0.08)" stroke="rgba(0,100,146,0.2)"/>
+              <text x="585" y="138" text-anchor="middle" fill="#006492" font-size="8" font-weight="700" letter-spacing="1">EXTERNAL</text>
 
-                <div class="flow-step">
-                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--teal);"></div><div class="flow-connector" style="background:var(--teal);opacity:0.15;"></div></div>
-                    <div class="flow-content">
-                        <div class="flow-step-label" style="color:var(--teal) !important;">Step 4 — Internal Data</div>
-                        <div class="flow-step-title">BX AI Industry Mapping</div>
-                        <div class="flow-step-desc">BX AI takes the company's primary industry from the external data and maps it to our internal BXT_L2 classification taxonomy. This mapping enables comparison against our proprietary benchmarks.</div>
-                        <span class="flow-badge flow-badge-int">Internal Data</span>
-                    </div>
-                </div>
+              <!-- Arrow down -->
+              <line x1="450" y1="192" x2="450" y2="228" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
 
-                <div class="flow-step">
-                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--teal);"></div><div class="flow-connector" style="background:var(--teal);opacity:0.15;"></div></div>
-                    <div class="flow-content">
-                        <div class="flow-step-label" style="color:var(--teal) !important;">Step 5 — Internal Data</div>
-                        <div class="flow-step-title">Snowflake Query (Salesforce Data)</div>
-                        <div class="flow-step-desc">Using the mapped BXT_L2 classification, revenue, and geographic scope, the system queries Snowflake — which stores our Salesforce data — to find comparable companies. It retrieves median savings rates from similar engagements filtered by industry, region (NAM/LATAM), and revenue band (>$10B).</div>
-                        <span class="flow-badge flow-badge-int">Internal Data</span>
-                    </div>
-                </div>
+              <!-- ── STEP 3: Normalize JSON ── -->
+              <rect x="260" y="230" width="380" height="72" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
+              <rect x="260" y="230" width="380" height="3" fill="#006492"/>
+              <text x="290" y="254" fill="#006492" font-size="8" font-weight="700" letter-spacing="1.5">STEP 3 · PROCESSING</text>
+              <text x="290" y="274" fill="#2d2d2d" font-size="14" font-weight="600">Python normalizes JSON response</text>
+              <text x="290" y="290" fill="#999" font-size="11">Validates types, structures objects, cleans financials, maps sources</text>
 
-                <div class="flow-step">
-                    <div class="flow-line"><div class="flow-dot" style="border-color:var(--rust);"></div><div class="flow-connector" style="background:transparent;"></div></div>
-                    <div class="flow-content">
-                        <div class="flow-step-label" style="color:var(--rust) !important;">Step 6 — Output</div>
-                        <div class="flow-step-title">Cost Savings Estimate</div>
-                        <div class="flow-step-desc">The system combines the external company profile with internal benchmarks to produce a cost optimization projection across three scenarios (conservative, median, optimistic). The analyst can adjust addressable spend percentage and download the full report as PDF.</div>
-                        <span class="flow-badge flow-badge-out">Output</span>
-                    </div>
-                </div>
+              <!-- Arrow splits into two -->
+              <line x1="450" y1="302" x2="450" y2="330" stroke="#999" stroke-width="1.5"/>
+              <line x1="450" y1="330" x2="250" y2="330" stroke="#1B5E5C" stroke-width="1.5"/>
+              <line x1="450" y1="330" x2="650" y2="330" stroke="#1B5E5C" stroke-width="1.5"/>
+              <line x1="250" y1="330" x2="250" y2="362" stroke="#1B5E5C" stroke-width="1.5" marker-end="url(#ah-t)"/>
+              <line x1="650" y1="330" x2="650" y2="362" stroke="#1B5E5C" stroke-width="1.5" marker-end="url(#ah-t)"/>
 
-            </div>''', unsafe_allow_html=True)
+              <!-- ── STEP 4a: BX AI Mapping ── -->
+              <rect x="100" y="364" width="300" height="80" rx="0" fill="#fff" stroke="#1B5E5C" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="100" y="364" width="300" height="3" fill="#1B5E5C"/>
+              <text x="130" y="388" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1.5">STEP 4A · INTERNAL</text>
+              <text x="130" y="408" fill="#2d2d2d" font-size="14" font-weight="600">BX AI → Industry Mapping</text>
+              <text x="130" y="428" fill="#999" font-size="11">Maps company industry to BXT_L2 taxonomy</text>
+              <rect x="310" y="378" width="74" height="18" rx="0" fill="rgba(27,94,92,0.06)" stroke="rgba(27,94,92,0.15)"/>
+              <text x="347" y="390" text-anchor="middle" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1">INTERNAL</text>
 
+              <!-- ── STEP 4b: Snowflake Query ── -->
+              <rect x="500" y="364" width="300" height="80" rx="0" fill="#fff" stroke="#1B5E5C" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="500" y="364" width="300" height="3" fill="#1B5E5C"/>
+              <text x="530" y="388" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1.5">STEP 4B · INTERNAL</text>
+              <text x="530" y="408" fill="#2d2d2d" font-size="14" font-weight="600">Snowflake → Salesforce Data</text>
+              <text x="530" y="428" fill="#999" font-size="11">Queries comparable companies by BXT_L2, revenue, region</text>
+              <rect x="710" y="378" width="74" height="18" rx="0" fill="rgba(27,94,92,0.06)" stroke="rgba(27,94,92,0.15)"/>
+              <text x="747" y="390" text-anchor="middle" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1">INTERNAL</text>
+
+              <!-- Arrows merge -->
+              <line x1="250" y1="444" x2="250" y2="475" stroke="#1B5E5C" stroke-width="1.5"/>
+              <line x1="650" y1="444" x2="650" y2="475" stroke="#1B5E5C" stroke-width="1.5"/>
+              <line x1="250" y1="475" x2="650" y2="475" stroke="#A95228" stroke-width="1.5"/>
+              <line x1="450" y1="475" x2="450" y2="510" stroke="#A95228" stroke-width="1.5" marker-end="url(#ah-r)"/>
+
+              <!-- ── STEP 5: Output ── -->
+              <rect x="230" y="512" width="440" height="90" rx="0" fill="#fff" stroke="#A95228" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="230" y="512" width="440" height="3" fill="#A95228"/>
+              <text x="260" y="538" fill="#A95228" font-size="8" font-weight="700" letter-spacing="1.5">STEP 5 · OUTPUT</text>
+              <text x="260" y="558" fill="#2d2d2d" font-size="14" font-weight="600">Cost Savings Estimate & Intelligence Report</text>
+              <text x="260" y="578" fill="#999" font-size="11">Conservative / Median / Optimistic projections + downloadable report</text>
+              <text x="260" y="593" fill="#999" font-size="11">Full company profile, procurement SWOT, risk analysis</text>
+              <rect x="580" y="528" width="72" height="18" rx="0" fill="rgba(169,82,40,0.06)" stroke="rgba(169,82,40,0.2)"/>
+              <text x="616" y="540" text-anchor="middle" fill="#A95228" font-size="8" font-weight="700" letter-spacing="1">OUTPUT</text>
+            </svg>
+            ''', unsafe_allow_html=True)
+
+            # ── DATA SOURCES ──
             st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="sec-label">Data Sources</div>', unsafe_allow_html=True)
             st.markdown('<h2 class="sec-title">Internal vs <em>External</em></h2>', unsafe_allow_html=True)
@@ -555,21 +574,15 @@ if search:
                 st.markdown('''<div class="card" style="border-left:3px solid var(--blue);">
                     <h3>External Data</h3>
                     <p style="margin-bottom:16px;">Sourced via Perplexity AI API in real-time for each company search.</p>
-                    <div class="irow"><div class="irow-label">Company overview</div><div class="irow-val">Name, jurisdiction, founding year, headquarters, description</div></div>
-                    <div class="irow"><div class="irow-label">Financials</div><div class="irow-val">Revenue, employee count (public estimates for private companies)</div></div>
-                    <div class="irow"><div class="irow-label">Procurement org</div><div class="irow-val">Maturity assessment, structure, category management, CPO</div></div>
-                    <div class="irow"><div class="irow-label">Analysis</div><div class="irow-val">SWOT analysis, risk factors, mitigation strategies</div></div>
-                    <div class="irow"><div class="irow-label">Sources</div><div class="irow-val">Every data point includes quote and source URL for verification</div></div>
+                    <div class="irow"><div class="irow-label">Perplexity Output</div><div class="irow-val">Structured JSON with company profile, financials, procurement org, SWOT, risks — each data point includes source quote and URL</div></div>
                 </div>''', unsafe_allow_html=True)
             with c2:
                 st.markdown('''<div class="card" style="border-left:3px solid var(--teal);">
                     <h3>Internal Data</h3>
-                    <p style="margin-bottom:16px;">Proprietary Blackstone data from Salesforce, stored and queried in Snowflake.</p>
-                    <div class="irow"><div class="irow-label">BXT_L2 Taxonomy</div><div class="irow-val">Proprietary industry classification system for benchmarking</div></div>
-                    <div class="irow"><div class="irow-label">Savings Rates</div><div class="irow-val">Median projected savings by industry, geography, and revenue band</div></div>
-                    <div class="irow"><div class="irow-label">Salesforce CRM</div><div class="irow-val">Historical engagement data, comparable company profiles</div></div>
-                    <div class="irow"><div class="irow-label">Snowflake DW</div><div class="irow-val">Analytical queries for benchmarking and similarity matching</div></div>
-                    <div class="irow"><div class="irow-label">BX AI</div><div class="irow-val">Industry mapping model that classifies companies into BXT_L2</div></div>
+                    <p style="margin-bottom:16px;">Proprietary Blackstone data powering benchmarks and projections.</p>
+                    <div class="irow"><div class="irow-label">BXT_L2 Mappings</div><div class="irow-val">Proprietary industry classification taxonomy for benchmarking</div></div>
+                    <div class="irow"><div class="irow-label">Salesforce Data in Snowflake</div><div class="irow-val">Historical engagement data, comparable companies by industry, revenue, and geography</div></div>
+                    <div class="irow"><div class="irow-label">BX AI</div><div class="irow-val">ML model that maps company industry categories to BXT_L2 classifications</div></div>
                 </div>''', unsafe_allow_html=True)
 
     else:
