@@ -590,7 +590,7 @@ if search:
         st.markdown('<div class="notfound"><strong>Company not found</strong><p>Try searching for "Kiewit Corporation" or "Kiewit"</p></div>', unsafe_allow_html=True)
 else:
     st.markdown('''<div class="welcome">
-        <h2>Company <em>Intelligence</em></h2>
+        <h2>Search to <em>Begin</em></h2>
         <p>Enter a company name in the search bar to view detailed due diligence, procurement analysis, and cost optimization projections.</p>
         <div class="avail">Available: Kiewit Corporation</div>
         <div class="tip">Hover over underlined values to see source references</div>
