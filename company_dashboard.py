@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import base64
-import io
 
 st.set_page_config(page_title="Company Intelligence Dashboard", page_icon="🏢", layout="wide", initial_sidebar_state="collapsed")
 
@@ -49,11 +48,15 @@ st.markdown("""
     .hero { background: var(--black); padding: 40px 48px 36px; margin: -1rem -1rem 0 -1rem; position: relative; overflow: hidden; }
     .hero::before { content:''; position:absolute; top:-40%; right:-10%; width:600px; height:600px; background:radial-gradient(circle,rgba(255,255,255,0.03) 0%,transparent 60%); pointer-events:none; }
     .hero-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; position:relative; z-index:1; }
-    .hero-wordmark { font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#FFF !important; }
-    .hero-nav { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:400; color:rgba(255,255,255,0.4) !important; letter-spacing:0.5px; }
-    .hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(40px,5.5vw,64px); font-weight:400; line-height:1.08; letter-spacing:-2px; color:#FFF !important; margin:0 0 14px 0; position:relative; z-index:1; }
-    .hero h1 em { font-style:italic; }
-    .hero-sub { font-size:15px; font-weight:300; color:rgba(255,255,255,0.5) !important; max-width:520px; line-height:1.7; margin:0; position:relative; z-index:1; }
+    /* Hero — override ALL Streamlit text color rules inside hero */
+    .stApp .hero, .stApp .hero *, .stMarkdown .hero, .stMarkdown .hero *,
+    div[data-testid="stMarkdownContainer"] .hero,
+    div[data-testid="stMarkdownContainer"] .hero * { color: #FFFFFF !important; }
+    div[data-testid="stMarkdownContainer"] .hero .hero-nav { color: rgba(255,255,255,0.4) !important; }
+    .hero-wordmark { font-family:'DM Sans',sans-serif !important; font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#FFF !important; }
+    .hero-nav { font-family:'DM Sans',sans-serif !important; font-size:11px; font-weight:400; color:rgba(255,255,255,0.4) !important; letter-spacing:0.5px; }
+    .hero h1 { font-family:'Instrument Serif',serif !important; font-size:clamp(40px,5.5vw,64px); font-weight:400; line-height:1.08; letter-spacing:-2px; color:#FFFFFF !important; margin:0; position:relative; z-index:1; }
+    .hero h1 em { font-style:italic; color:#FFFFFF !important; }
     .hero-accent-bar { height:3px; margin:0 -1rem; background:linear-gradient(90deg,var(--teal),var(--blue),var(--rust)); }
 
     /* Search */
@@ -242,100 +245,77 @@ def check_criteria(co):
     return g in ["NAM","LATAM","NAM/LATAM"], r>10, g, r
 
 def generate_pdf(co):
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-    from reportlab.lib.units import inch
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=60, rightMargin=60, topMargin=50, bottomMargin=50)
-    styles = getSampleStyleSheet()
-
-    teal_c = colors.HexColor("#1B5E5C")
-    rust_c = colors.HexColor("#A95228")
-    black_c = colors.HexColor("#000000")
-    gray_c = colors.HexColor("#666666")
-
-    title_s = ParagraphStyle('TitleCustom', parent=styles['Title'], fontName='Helvetica-Bold', fontSize=22, textColor=black_c, spaceAfter=6)
-    sub_s = ParagraphStyle('SubCustom', parent=styles['Normal'], fontSize=10, textColor=gray_c, spaceAfter=20)
-    h2_s = ParagraphStyle('H2Custom', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=14, textColor=teal_c, spaceBefore=20, spaceAfter=10)
-    body_s = ParagraphStyle('BodyCustom', parent=styles['Normal'], fontSize=10, leading=15, textColor=black_c)
-    label_s = ParagraphStyle('LabelCustom', parent=styles['Normal'], fontSize=8, textColor=gray_c, spaceAfter=2)
-
-    story = []
+    """Generate a downloadable HTML report (renders as PDF-like in browser)."""
     m = co["meta"]; ov = co["company_overview"]; fin = co["financials"]
-
-    story.append(Paragraph(f"Company Intelligence Report", title_s))
-    story.append(Paragraph(f"{m['company_name']['value']} — Confidential", sub_s))
-    story.append(HRFlowable(width="100%", thickness=2, color=black_c, spaceAfter=16))
-
-    story.append(Paragraph("Company Overview", h2_s))
-    story.append(Paragraph(ov["description"]["value"], body_s))
-    story.append(Spacer(1, 10))
-
-    info_data = [
-        ["Founded", str(ov["founded_year"]["value"]), "Headquarters", ov["headquarters"]["value"]],
-        ["Jurisdiction", m["jurisdiction"]["value"], "Status", m["listed_status"]["value"]],
-        ["Employees", f'{co["workforce"]["total_employees"]["value"]:,}', "Revenue 2024", f'${fin["revenue_2024"]["value"]}B'],
-    ]
-    t = Table(info_data, colWidths=[1.1*inch, 1.9*inch, 1.1*inch, 1.9*inch])
-    t.setStyle(TableStyle([
-        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'), ('FONTSIZE', (0,0), (-1,-1), 9),
-        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
-        ('TEXTCOLOR', (0,0), (0,-1), gray_c), ('TEXTCOLOR', (2,0), (2,-1), gray_c),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8), ('TOPPADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-2), 0.5, colors.HexColor("#E4E4E4")),
-    ]))
-    story.append(t)
-
-    story.append(Paragraph("Procurement Organization", h2_s))
-    proc = co["procurement_organization"]
-    story.append(Paragraph(f"<b>Maturity Level:</b> {proc['overall_maturity_level']['value']}", body_s))
-    story.append(Paragraph(f"<b>Structure:</b> {proc['structure']['value']}", body_s))
-    story.append(Paragraph(f"<b>CPO:</b> {proc['cpo']['value']}", body_s))
-    story.append(Spacer(1, 8))
-    for dim, data in proc["maturity_dimensions"].items():
-        story.append(Paragraph(f"  {dim}: {data['value']} ({data['score']}/5)", body_s))
-
-    story.append(Paragraph("Procurement SWOT", h2_s))
-    for cat, label in [("strengths","Strengths"),("weaknesses","Weaknesses"),("opportunities","Opportunities"),("threats","Threats")]:
-        story.append(Paragraph(f"<b>{label}</b>", body_s))
-        for item in co["procurement_swot"][cat]:
-            story.append(Paragraph(f"  → {item['value']}", body_s))
-        story.append(Spacer(1, 6))
-
-    story.append(Paragraph("Procurement Risks", h2_s))
-    for risk in co["procurement_risks"]["key_risks"]:
-        story.append(Paragraph(f"  ⚠ {risk['value']}", body_s))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(f"<b>Mitigation:</b> {co['procurement_risks']['mitigation']['value']}", body_s))
-
-    mp = co["industry_mapping"]
+    proc = co["procurement_organization"]; mp = co["industry_mapping"]
     is_nam, is_10b, geo, revenue = check_criteria(co)
     meets = is_nam and is_10b
     rate = BXT_L2_SAVINGS.get(mp["bxt_l2"], BXT_L2_SAVINGS["Default"]) if meets else BXT_L2_SAVINGS["Default"]
-
-    story.append(Paragraph("Cost Optimization Projection", h2_s))
-    story.append(Paragraph(f"Industry: {mp['original_industry']}  →  BXT L2: {mp['bxt_l2']}", body_s))
-    story.append(Paragraph(f"Median Savings Rate: {rate*100:.4f}%  |  Geographic Scope: {geo}  |  Revenue: ${revenue}B", body_s))
-    story.append(Spacer(1, 10))
-
     total_rev = revenue * 1000
+
+    dims_html = ""
+    for dim, data in proc["maturity_dimensions"].items():
+        dims_html += f"<tr><td style='padding:6px 12px;border-bottom:1px solid #eee;'>{dim}</td><td style='padding:6px 12px;border-bottom:1px solid #eee;'>{data['value']} ({data['score']}/5)</td></tr>"
+
+    swot_html = ""
+    for cat, label in [("strengths","Strengths"),("weaknesses","Weaknesses"),("opportunities","Opportunities"),("threats","Threats")]:
+        items = "".join([f"<li style='margin-bottom:4px;'>{i['value']}</li>" for i in co["procurement_swot"][cat]])
+        swot_html += f"<div style='margin-bottom:16px;'><strong>{label}</strong><ul style='margin-top:4px;'>{items}</ul></div>"
+
+    risks_html = "".join([f"<li style='margin-bottom:4px;'>⚠ {r['value']}</li>" for r in co["procurement_risks"]["key_risks"]])
+
+    savings_rows = ""
     for pct in [20, 30, 40]:
         spend = total_rev * (pct / 100)
-        proj = spend * rate
-        cons = spend * rate * 0.7
-        opt = spend * rate * 1.3
-        story.append(Paragraph(f"<b>At {pct}% addressable spend (${spend:,.0f}M):</b>  Conservative ${cons:,.2f}M  |  Median ${proj:,.2f}M  |  Optimistic ${opt:,.2f}M", body_s))
+        p = spend * rate; c = spend * rate * 0.7; o = spend * rate * 1.3
+        savings_rows += f"<tr><td style='padding:6px 12px;border-bottom:1px solid #eee;'>{pct}%</td><td style='padding:6px 12px;border-bottom:1px solid #eee;'>${spend:,.0f}M</td><td style='padding:6px 12px;border-bottom:1px solid #eee;'>${c:,.2f}M</td><td style='padding:6px 12px;border-bottom:1px solid #eee;'>${p:,.2f}M</td><td style='padding:6px 12px;border-bottom:1px solid #eee;'>${o:,.2f}M</td></tr>"
 
-    story.append(Spacer(1, 24))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=gray_c, spaceAfter=8))
-    story.append(Paragraph("Confidential — For informational purposes only. Generated by BX Company Intelligence Platform.", label_s))
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>{m['company_name']['value']} - Intelligence Report</title>
+    <style>
+        @page {{ margin: 40px 50px; }}
+        body {{ font-family: Helvetica, Arial, sans-serif; color: #2d2d2d; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px; }}
+        h1 {{ font-size: 24px; font-weight: 700; margin: 0 0 4px 0; }}
+        h2 {{ font-size: 16px; color: #1B5E5C; border-bottom: 2px solid #1B5E5C; padding-bottom: 6px; margin-top: 28px; }}
+        .sub {{ font-size: 12px; color: #666; margin-bottom: 20px; }}
+        .bar {{ height: 3px; background: #000; margin-bottom: 20px; }}
+        table {{ width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }}
+        th {{ text-align: left; padding: 8px 12px; background: #f5f5f5; border-bottom: 2px solid #ddd; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #666; }}
+        p, li {{ font-size: 12px; }}
+        .footer {{ margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 10px; color: #999; }}
+    </style></head><body>
+    <h1>Company Intelligence Report</h1>
+    <div class="sub">{m['company_name']['value']} — Confidential</div>
+    <div class="bar"></div>
 
-    doc.build(story)
-    buf.seek(0)
-    return buf.getvalue()
+    <h2>Company Overview</h2>
+    <p>{ov['description']['value']}</p>
+    <table>
+        <tr><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:bold;color:#666;">Founded</td><td style="padding:6px 12px;border-bottom:1px solid #eee;">{ov['founded_year']['value']}</td><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:bold;color:#666;">Headquarters</td><td style="padding:6px 12px;border-bottom:1px solid #eee;">{ov['headquarters']['value']}</td></tr>
+        <tr><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:bold;color:#666;">Jurisdiction</td><td style="padding:6px 12px;border-bottom:1px solid #eee;">{m['jurisdiction']['value']}</td><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:bold;color:#666;">Status</td><td style="padding:6px 12px;border-bottom:1px solid #eee;">{m['listed_status']['value']}</td></tr>
+        <tr><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:bold;color:#666;">Employees</td><td style="padding:6px 12px;border-bottom:1px solid #eee;">{co['workforce']['total_employees']['value']:,}</td><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:bold;color:#666;">Revenue 2024</td><td style="padding:6px 12px;border-bottom:1px solid #eee;">${fin['revenue_2024']['value']}B</td></tr>
+    </table>
+
+    <h2>Procurement Organization</h2>
+    <p><strong>Maturity:</strong> {proc['overall_maturity_level']['value']} &nbsp;|&nbsp; <strong>CPO:</strong> {proc['cpo']['value']}</p>
+    <p><strong>Structure:</strong> {proc['structure']['value']}</p>
+    <table><tr><th>Dimension</th><th>Score</th></tr>{dims_html}</table>
+
+    <h2>Procurement SWOT</h2>
+    {swot_html}
+
+    <h2>Procurement Risks</h2>
+    <ul>{risks_html}</ul>
+    <p><strong>Mitigation:</strong> {co['procurement_risks']['mitigation']['value']}</p>
+
+    <h2>Cost Optimization Projection</h2>
+    <p><strong>Industry:</strong> {mp['original_industry']} → <strong>BXT L2:</strong> {mp['bxt_l2']}</p>
+    <p><strong>Savings Rate:</strong> {rate*100:.4f}% &nbsp;|&nbsp; <strong>Scope:</strong> {geo} &nbsp;|&nbsp; <strong>Revenue:</strong> ${revenue}B</p>
+    <table><tr><th>Spend %</th><th>Addressable</th><th>Conservative</th><th>Median</th><th>Optimistic</th></tr>{savings_rows}</table>
+
+    <div class="footer">Confidential — For informational purposes only. Generated by BX Company Intelligence Platform.</div>
+    </body></html>"""
+    return html
 
 # ══════════════════════════════════════════════════════════════════
 # HEADER
@@ -346,7 +326,6 @@ st.markdown('''<div class="hero">
         <span class="hero-nav">Due Diligence & Procurement Analysis</span>
     </div>
     <h1>Company<br><em>Intelligence</em></h1>
-    <p class="hero-sub">Delivering actionable intelligence for institutional investors by analyzing procurement organizations, supply chains, and cost optimization opportunities.</p>
 </div><div class="hero-accent-bar"></div>''', unsafe_allow_html=True)
 
 # SEARCH
@@ -368,11 +347,11 @@ if search:
         with tab1:
             st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
 
-            # PDF download
-            pdf_bytes = generate_pdf(co)
-            b64 = base64.b64encode(pdf_bytes).decode()
+            # PDF-like HTML download
+            report_html = generate_pdf(co)
+            b64 = base64.b64encode(report_html.encode()).decode()
             company_name = co["meta"]["company_name"]["value"].replace(" ", "_")
-            st.markdown(f'<div style="text-align:right;"><a class="dl-btn" href="data:application/pdf;base64,{b64}" download="{company_name}_Intelligence_Report.pdf">↓ Download PDF Report</a></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:right;"><a class="dl-btn" href="data:text/html;base64,{b64}" download="{company_name}_Intelligence_Report.html">↓ Download Report</a></div>', unsafe_allow_html=True)
 
             st.markdown('<div class="sec-label">Overview</div>', unsafe_allow_html=True)
             st.markdown('<h2 class="sec-title">Company <em>Profile</em></h2>', unsafe_allow_html=True)
