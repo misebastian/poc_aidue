@@ -129,14 +129,19 @@ st.markdown("""
     .a-warn { border-left:3px solid var(--rust); } .a-ok { border-left:3px solid var(--lime); } .a-info { border-left:3px solid var(--blue); }
     .abox strong { color:var(--text) !important; font-weight:600; }
 
-    /* Tooltips */
-    .ws { position:relative; cursor:pointer; border-bottom:1px dotted var(--text-ter); display:inline; transition:border-color 0.3s; }
-    .ws:hover { border-bottom-color:var(--teal); }
-    .tt { display:none; position:absolute; background:var(--bg-card); color:var(--text) !important; padding:16px 20px; border-radius:0; font-size:12px; z-index:9999; max-width:400px; min-width:260px; box-shadow:0 12px 40px rgba(0,0,0,0.15); border:1px solid var(--gray); left:0; top:calc(100% + 8px); line-height:1.6; }
-    .tt::before { content:""; position:absolute; top:-12px; left:0; right:0; height:16px; background:transparent; }
-    .ws:hover .tt, .tt:hover { display:block; }
-    .tt strong { color:var(--teal) !important; } .tt a { color:var(--rust) !important; text-decoration:underline; font-weight:600; }
-    .tt-q { font-style:italic; color:var(--text-sec) !important; margin:6px 0; padding-left:10px; border-left:2px solid var(--teal); font-size:11px; }
+    /* Tooltips — fixed for reliable hover */
+    .ws { position:relative; cursor:pointer; border-bottom:1px dotted var(--text-ter); display:inline; transition:border-color 0.3s; z-index:1; }
+    .ws:hover { border-bottom-color:var(--teal); z-index:9999; }
+    .tt { display:none; position:absolute; background:var(--bg-card); color:var(--text) !important; padding:18px 22px; border-radius:8px; font-size:12px; z-index:99999; max-width:420px; min-width:280px; box-shadow:0 8px 30px rgba(0,0,0,0.18); border:1px solid var(--gray); left:0; bottom:calc(100% + 10px); line-height:1.6; pointer-events:auto; }
+    .tt::after { content:""; position:absolute; bottom:-14px; left:0; right:0; height:18px; background:transparent; }
+    .ws:hover .tt { display:block; }
+    .tt:hover { display:block; }
+    .tt strong { color:var(--teal) !important; display:block; margin-bottom:6px; font-size:11px; letter-spacing:1px; text-transform:uppercase; }
+    .tt a { color:var(--rust) !important; text-decoration:underline; font-weight:600; display:inline-block; margin-top:8px; padding:4px 0; font-size:12px; }
+    .tt a:hover { color:var(--teal) !important; }
+    .tt-q { font-style:italic; color:var(--text-sec) !important; margin:6px 0 8px 0; padding-left:12px; border-left:2px solid var(--teal); font-size:11px; line-height:1.5; }
+    /* Prevent parent overflow from clipping tooltips */
+    .card, .irow, .swot, .mg-cell, .abox, .met { overflow:visible !important; }
 
     /* Criteria & Mapping */
     .crit-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--gray); border:1px solid var(--gray); border-radius:0; overflow:hidden; margin:20px 0; }
@@ -485,83 +490,79 @@ if search:
 
             # ── VISUAL FLOWCHART ──
             st.markdown('''
-            <svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;margin:0 auto 40px;display:block;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+            <svg viewBox="0 0 960 640" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:960px;margin:0 auto 40px;display:block;font-family:Helvetica,Arial,sans-serif;">
               <defs>
-                <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#999"/></marker>
                 <marker id="ah-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#006492"/></marker>
                 <marker id="ah-t" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#1B5E5C"/></marker>
                 <marker id="ah-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#A95228"/></marker>
                 <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.06"/></filter>
               </defs>
 
-              <!-- ── STEP 1: User Input ── -->
-              <rect x="320" y="10" width="260" height="64" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
-              <rect x="320" y="10" width="260" height="3" fill="#006492"/>
-              <text x="450" y="36" text-anchor="middle" fill="#999" font-size="8" font-weight="700" letter-spacing="1.5">STEP 1</text>
-              <text x="450" y="56" text-anchor="middle" fill="#2d2d2d" font-size="14" font-weight="600">Analyst enters company name</text>
+              <!-- STEP 1 -->
+              <rect x="310" y="14" width="340" height="60" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
+              <rect x="310" y="14" width="340" height="3" fill="#666"/>
+              <text x="480" y="38" text-anchor="middle" fill="#999" font-size="9" font-weight="700" letter-spacing="1.5">STEP 1</text>
+              <text x="480" y="58" text-anchor="middle" fill="#2d2d2d" font-size="14" font-weight="600">Analyst enters company name</text>
 
-              <!-- Arrow down -->
-              <line x1="450" y1="74" x2="450" y2="110" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
+              <line x1="480" y1="74" x2="480" y2="112" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
 
-              <!-- ── STEP 2: Perplexity API ── -->
-              <rect x="260" y="112" width="380" height="80" rx="0" fill="#fff" stroke="#006492" stroke-width="1.5" filter="url(#ds)"/>
-              <rect x="260" y="112" width="380" height="3" fill="#006492"/>
-              <text x="290" y="136" fill="#006492" font-size="8" font-weight="700" letter-spacing="1.5">STEP 2 · EXTERNAL</text>
-              <text x="290" y="156" fill="#2d2d2d" font-size="14" font-weight="600">Perplexity API → Company Research</text>
-              <text x="290" y="176" fill="#999" font-size="11">Returns structured JSON with company profile, financials, procurement, SWOT</text>
-              <rect x="546" y="126" width="78" height="18" rx="0" fill="rgba(0,100,146,0.08)" stroke="rgba(0,100,146,0.2)"/>
-              <text x="585" y="138" text-anchor="middle" fill="#006492" font-size="8" font-weight="700" letter-spacing="1">EXTERNAL</text>
+              <!-- STEP 2 -->
+              <rect x="220" y="114" width="520" height="76" rx="0" fill="#fff" stroke="#006492" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="220" y="114" width="520" height="3" fill="#006492"/>
+              <text x="250" y="138" fill="#006492" font-size="9" font-weight="700" letter-spacing="1.5">STEP 2 · EXTERNAL</text>
+              <text x="250" y="158" fill="#2d2d2d" font-size="14" font-weight="600">Perplexity API → Company Research</text>
+              <text x="250" y="178" fill="#999" font-size="11">Returns JSON: profile, financials, procurement org, SWOT</text>
+              <rect x="644" y="128" width="80" height="20" rx="0" fill="rgba(0,100,146,0.08)" stroke="rgba(0,100,146,0.25)"/>
+              <text x="684" y="142" text-anchor="middle" fill="#006492" font-size="8" font-weight="700" letter-spacing="1">EXTERNAL</text>
 
-              <!-- Arrow down -->
-              <line x1="450" y1="192" x2="450" y2="228" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
+              <line x1="480" y1="190" x2="480" y2="228" stroke="#006492" stroke-width="1.5" marker-end="url(#ah-b)"/>
 
-              <!-- ── STEP 3: Normalize JSON ── -->
-              <rect x="260" y="230" width="380" height="72" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
-              <rect x="260" y="230" width="380" height="3" fill="#006492"/>
-              <text x="290" y="254" fill="#006492" font-size="8" font-weight="700" letter-spacing="1.5">STEP 3 · PROCESSING</text>
+              <!-- STEP 3 -->
+              <rect x="260" y="230" width="440" height="70" rx="0" fill="#fff" stroke="#E4E4E4" filter="url(#ds)"/>
+              <rect x="260" y="230" width="440" height="3" fill="#006492"/>
+              <text x="290" y="254" fill="#006492" font-size="9" font-weight="700" letter-spacing="1.5">STEP 3 · PROCESSING</text>
               <text x="290" y="274" fill="#2d2d2d" font-size="14" font-weight="600">Python normalizes JSON response</text>
-              <text x="290" y="290" fill="#999" font-size="11">Validates types, structures objects, cleans financials, maps sources</text>
+              <text x="290" y="290" fill="#999" font-size="11">Validates types, cleans financials, maps sources</text>
 
-              <!-- Arrow splits into two -->
-              <line x1="450" y1="302" x2="450" y2="330" stroke="#999" stroke-width="1.5"/>
-              <line x1="450" y1="330" x2="250" y2="330" stroke="#1B5E5C" stroke-width="1.5"/>
-              <line x1="450" y1="330" x2="650" y2="330" stroke="#1B5E5C" stroke-width="1.5"/>
-              <line x1="250" y1="330" x2="250" y2="362" stroke="#1B5E5C" stroke-width="1.5" marker-end="url(#ah-t)"/>
-              <line x1="650" y1="330" x2="650" y2="362" stroke="#1B5E5C" stroke-width="1.5" marker-end="url(#ah-t)"/>
+              <!-- Split -->
+              <line x1="480" y1="300" x2="480" y2="330" stroke="#999" stroke-width="1.5"/>
+              <line x1="260" y1="330" x2="700" y2="330" stroke="#999" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="260" y1="330" x2="260" y2="368" stroke="#1B5E5C" stroke-width="1.5" marker-end="url(#ah-t)"/>
+              <line x1="700" y1="330" x2="700" y2="368" stroke="#1B5E5C" stroke-width="1.5" marker-end="url(#ah-t)"/>
 
-              <!-- ── STEP 4a: BX AI Mapping ── -->
-              <rect x="100" y="364" width="300" height="80" rx="0" fill="#fff" stroke="#1B5E5C" stroke-width="1.5" filter="url(#ds)"/>
-              <rect x="100" y="364" width="300" height="3" fill="#1B5E5C"/>
-              <text x="130" y="388" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1.5">STEP 4A · INTERNAL</text>
-              <text x="130" y="408" fill="#2d2d2d" font-size="14" font-weight="600">BX AI → Industry Mapping</text>
-              <text x="130" y="428" fill="#999" font-size="11">Maps company industry to BXT_L2 taxonomy</text>
-              <rect x="310" y="378" width="74" height="18" rx="0" fill="rgba(27,94,92,0.06)" stroke="rgba(27,94,92,0.15)"/>
-              <text x="347" y="390" text-anchor="middle" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1">INTERNAL</text>
+              <!-- STEP 4A -->
+              <rect x="80" y="370" width="360" height="76" rx="0" fill="#fff" stroke="#1B5E5C" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="80" y="370" width="360" height="3" fill="#1B5E5C"/>
+              <text x="110" y="394" fill="#1B5E5C" font-size="9" font-weight="700" letter-spacing="1.5">STEP 4A · INTERNAL</text>
+              <text x="110" y="414" fill="#2d2d2d" font-size="14" font-weight="600">BX AI → Industry Mapping</text>
+              <text x="110" y="434" fill="#999" font-size="11">LLM maps company industry to BXT_L2</text>
+              <rect x="350" y="384" width="76" height="20" rx="0" fill="rgba(27,94,92,0.06)" stroke="rgba(27,94,92,0.2)"/>
+              <text x="388" y="398" text-anchor="middle" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1">INTERNAL</text>
 
-              <!-- ── STEP 4b: Snowflake Query ── -->
-              <rect x="500" y="364" width="300" height="80" rx="0" fill="#fff" stroke="#1B5E5C" stroke-width="1.5" filter="url(#ds)"/>
-              <rect x="500" y="364" width="300" height="3" fill="#1B5E5C"/>
-              <text x="530" y="388" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1.5">STEP 4B · INTERNAL</text>
-              <text x="530" y="408" fill="#2d2d2d" font-size="14" font-weight="600">Snowflake → Salesforce Data</text>
-              <text x="530" y="428" fill="#999" font-size="11">Queries comparable companies by BXT_L2, revenue, region</text>
-              <rect x="710" y="378" width="74" height="18" rx="0" fill="rgba(27,94,92,0.06)" stroke="rgba(27,94,92,0.15)"/>
-              <text x="747" y="390" text-anchor="middle" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1">INTERNAL</text>
+              <!-- STEP 4B -->
+              <rect x="520" y="370" width="360" height="76" rx="0" fill="#fff" stroke="#1B5E5C" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="520" y="370" width="360" height="3" fill="#1B5E5C"/>
+              <text x="550" y="394" fill="#1B5E5C" font-size="9" font-weight="700" letter-spacing="1.5">STEP 4B · INTERNAL</text>
+              <text x="550" y="414" fill="#2d2d2d" font-size="14" font-weight="600">Snowflake → Salesforce Data</text>
+              <text x="550" y="434" fill="#999" font-size="11">Comparables by BXT_L2, revenue, region</text>
+              <rect x="790" y="384" width="76" height="20" rx="0" fill="rgba(27,94,92,0.06)" stroke="rgba(27,94,92,0.2)"/>
+              <text x="828" y="398" text-anchor="middle" fill="#1B5E5C" font-size="8" font-weight="700" letter-spacing="1">INTERNAL</text>
 
-              <!-- Arrows merge -->
-              <line x1="250" y1="444" x2="250" y2="475" stroke="#1B5E5C" stroke-width="1.5"/>
-              <line x1="650" y1="444" x2="650" y2="475" stroke="#1B5E5C" stroke-width="1.5"/>
-              <line x1="250" y1="475" x2="650" y2="475" stroke="#A95228" stroke-width="1.5"/>
-              <line x1="450" y1="475" x2="450" y2="510" stroke="#A95228" stroke-width="1.5" marker-end="url(#ah-r)"/>
+              <!-- Merge -->
+              <line x1="260" y1="446" x2="260" y2="480" stroke="#1B5E5C" stroke-width="1.5"/>
+              <line x1="700" y1="446" x2="700" y2="480" stroke="#1B5E5C" stroke-width="1.5"/>
+              <line x1="260" y1="480" x2="700" y2="480" stroke="#999" stroke-width="1" stroke-dasharray="4,3"/>
+              <line x1="480" y1="480" x2="480" y2="518" stroke="#A95228" stroke-width="1.5" marker-end="url(#ah-r)"/>
 
-              <!-- ── STEP 5: Output ── -->
-              <rect x="230" y="512" width="440" height="90" rx="0" fill="#fff" stroke="#A95228" stroke-width="1.5" filter="url(#ds)"/>
-              <rect x="230" y="512" width="440" height="3" fill="#A95228"/>
-              <text x="260" y="538" fill="#A95228" font-size="8" font-weight="700" letter-spacing="1.5">STEP 5 · OUTPUT</text>
-              <text x="260" y="558" fill="#2d2d2d" font-size="14" font-weight="600">Cost Savings Estimate & Intelligence Report</text>
-              <text x="260" y="578" fill="#999" font-size="11">Conservative / Median / Optimistic projections + downloadable report</text>
-              <text x="260" y="593" fill="#999" font-size="11">Full company profile, procurement SWOT, risk analysis</text>
-              <rect x="580" y="528" width="72" height="18" rx="0" fill="rgba(169,82,40,0.06)" stroke="rgba(169,82,40,0.2)"/>
-              <text x="616" y="540" text-anchor="middle" fill="#A95228" font-size="8" font-weight="700" letter-spacing="1">OUTPUT</text>
+              <!-- STEP 5 -->
+              <rect x="200" y="520" width="560" height="90" rx="0" fill="#fff" stroke="#A95228" stroke-width="1.5" filter="url(#ds)"/>
+              <rect x="200" y="520" width="560" height="3" fill="#A95228"/>
+              <text x="230" y="546" fill="#A95228" font-size="9" font-weight="700" letter-spacing="1.5">STEP 5 · OUTPUT</text>
+              <text x="230" y="566" fill="#2d2d2d" font-size="14" font-weight="600">Cost Savings Estimate &amp; Intelligence Report</text>
+              <text x="230" y="586" fill="#999" font-size="11">Conservative / Median / Optimistic projections</text>
+              <text x="230" y="601" fill="#999" font-size="11">Company profile, procurement SWOT, risk analysis</text>
+              <rect x="660" y="536" width="76" height="20" rx="0" fill="rgba(169,82,40,0.06)" stroke="rgba(169,82,40,0.25)"/>
+              <text x="698" y="550" text-anchor="middle" fill="#A95228" font-size="8" font-weight="700" letter-spacing="1">OUTPUT</text>
             </svg>
             ''', unsafe_allow_html=True)
 
@@ -582,7 +583,7 @@ if search:
                     <p style="margin-bottom:16px;">Proprietary Blackstone data powering benchmarks and projections.</p>
                     <div class="irow"><div class="irow-label">BXT_L2 Mappings</div><div class="irow-val">Proprietary industry classification taxonomy for benchmarking</div></div>
                     <div class="irow"><div class="irow-label">Salesforce Data in Snowflake</div><div class="irow-val">Historical engagement data, comparable companies by industry, revenue, and geography</div></div>
-                    <div class="irow"><div class="irow-label">BX AI</div><div class="irow-val">ML model that maps company industry categories to BXT_L2 classifications</div></div>
+                    <div class="irow"><div class="irow-label">BX AI</div><div class="irow-val">LLM that maps company industry categories to BXT_L2 classifications</div></div>
                 </div>''', unsafe_allow_html=True)
 
     else:
@@ -596,6 +597,6 @@ else:
     </div>''', unsafe_allow_html=True)
 
 st.markdown('''<div class="dark-footer">
-    <span>© 2025 BLACKSTONE INC.</span>
+    <span>© 2026 BLACKSTONE INC.</span>
     <span>COMPANY INTELLIGENCE · DUE DILIGENCE · PROCUREMENT ANALYSIS</span>
 </div>''', unsafe_allow_html=True)
